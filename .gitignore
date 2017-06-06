@@ -1,0 +1,7 @@
+*.creator
+*.user
+*.config
+*.files
+*.includes
+install.sh
+Debug/

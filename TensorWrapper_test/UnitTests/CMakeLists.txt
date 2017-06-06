@@ -1,0 +1,4 @@
+NEW_TEST(TestEigen UnitTests)
+NEW_TEST(TestEigenTensor UnitTests)
+NEW_TEST(TestContraction UnitTests)
+NEW_TEST(TestShape UnitTests)
