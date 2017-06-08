@@ -1,2 +1,3 @@
 #pragma once
-#include "TensorWrapper/EigenWrapper.hpp"
+#include "TensorWrapper/EigenMatrixWrapper.hpp"
+#include "TensorWrapper/EigenTensorWrapper.hpp"

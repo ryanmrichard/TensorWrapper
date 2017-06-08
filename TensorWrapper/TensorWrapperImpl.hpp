@@ -53,11 +53,33 @@ struct TensorWrapperImpl {
     }
 
     ///Executes a contraction
-    template<typename LHS_t, typename RHS_t>
-    void contract(const Contraction<LHS_t,RHS_t>&)const
+    template<typename...Args>
+    void contract(const Contraction<Args...>&)const
     {
         static_assert(always_false<Tensor_t>::value,"Tensor defines no contract() API");
     }
+
+    ///Scales the tensor
+    template<typename RHS_t>
+    void scale(const RHS_t&,double)const
+    {
+        static_assert(always_false<Tensor_t>::value,"Tensor defines no scale() API");
+    }
+
+    ///Adds to the tensor
+    template<typename LHS_t, typename RHS_t>
+    void add(const LHS_t&,const RHS_t&)const
+    {
+        static_assert(always_false<Tensor_t>::value,"Tensor defines no add() API");
+    }
+
+    ///Subtracts from the tensor
+    template<typename LHS_t,typename RHS_t>
+    void subtract(const LHS_t&,const RHS_t&,double)const
+    {
+        static_assert(always_false<Tensor_t>::value,"Tensor defines no subtract() API");
+    }
+
 
 };
 

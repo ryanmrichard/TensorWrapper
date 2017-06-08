@@ -30,8 +30,8 @@ public:
         rank_(rank),tensor_(other)
     {}
 
-    template<typename LHS_t, typename RHS_t>
-    TensorWrapper(const Contraction<LHS_t,RHS_t>& rhs)
+    template<typename...Args>
+    TensorWrapper(const Contraction<Args...>& rhs)
     {
         tensor_=impl_.contract(rhs);
     }
@@ -54,8 +54,8 @@ public:
     }
 
 
-    template<typename LHS_t, typename RHS_t>
-    my_t& operator=(const Contraction<LHS_t,RHS_t>& rhs)
+    template<typename...Args>
+    my_t& operator=(const Contraction<Args...>& rhs)
     {
         tensor_=impl_.contract(rhs);
         return *this;
@@ -74,7 +74,8 @@ public:
     }
 
     ///API for contraction
-    IndexedTensor<rank,Tensor_t> operator()(const char* idx)const
+    template<size_t N> constexpr
+    IndexedTensor<rank,Tensor_t> operator()(const char(&idx)[N])const
     {
         return IndexedTensor<rank,Tensor_t>(tensor_,idx);
     }
@@ -86,6 +87,26 @@ public:
     ///Returns true if any element of two tensors differs
     template<typename RHS_t>
     bool operator!=(const RHS_t& other)const;
+
+    ///Scales this tensor by rhs
+    decltype(auto) operator*(double rhs)const
+    {
+        return impl_.scale(tensor_,rhs);
+    }
+
+    ///Adds rhs
+    template<typename RHS_t>
+    decltype(auto) operator+(const RHS_t& rhs)const
+    {
+        return impl_.add(tensor_,rhs);
+    }
+
+    ///Subtracts rhs
+    template<typename RHS_t>
+    decltype(auto) operator-(const RHS_t& rhs)const
+    {
+        return impl_.subtract(tensor_,rhs);
+    }
 
 };
 

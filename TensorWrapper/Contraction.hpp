@@ -5,13 +5,20 @@
 #include<sstream>
 #include<set>
 #include<map>
-
+#include <tuple>
+#include <utility>
 namespace TWrapper {
+
 namespace detail_ {
 
+///A class for wrapping a string literal and giving it a more C++-like feel
 class C_String{
 private:
+    ///A pointer to the beginning of the wrapped string
     const char* str_;
+
+    ///The pointer offset just past the end of our actual string (i.e. the
+    ///effective '\0' character)
     size_t end_;
 
     /** \brief Returns the position of the i-th occurence of a character
@@ -44,15 +51,16 @@ private:
     {}
 
 public:
+    ///Makes an unusable string for initializing containers
     constexpr C_String():str_(nullptr),end_(0){}
 
-    ///Makes a new c string
+    ///Makes a new C_String from a string literal
     template<size_t N>
     constexpr C_String(const char (&arr)[N])
         :str_(arr),end_(N-1)
     {}
 
-    ///The size of the c string
+    ///The number of char's in our string
     constexpr size_t size()const
     {
         return end_;
@@ -94,13 +102,39 @@ public:
         return true;
     }
 
-    ///Returns tru if these strings are not equal
+    ///Returns true if these strings are not equal
     constexpr bool operator!=(const C_String& other)const
     {
         return !((*this)==other);
     }
+
+    ///Returns true if this is less than other, lexographically speaking
+    constexpr bool  operator<(const C_String& other)const
+    {
+        if((*this)==other)return false;
+        const size_t min= size()<other.size()?size():other.size();
+        for(size_t i=0;i<min;++i)
+            if((*this)[i]>other[i])return false;
+        return true;
+    }
+
+    constexpr bool operator<=(const C_String& other)const
+    {
+        return (*this)==other || (*this)< other;
+    }
+
+    constexpr bool operator>(const C_String& other)const
+    {
+        return other<(*this);
+    }
+
+    constexpr bool operator>=(const C_String& other)const
+    {
+        return other<=(*this);
+    }
 };
 
+///Helper function for splitting the indices provided by the user
 template<size_t rank, size_t N> constexpr
 std::array<C_String,rank> parse_idx(const char(&arr)[N])
 {
@@ -111,138 +145,318 @@ std::array<C_String,rank> parse_idx(const char(&arr)[N])
     return rv;
 }
 
-///Splits a string into indices based on commas
-template<size_t N>
-std::array<std::string,N> split_comma(const std::string idx)
+
+template<size_t i,typename...Args> struct ContractionTraits;
+
+template<size_t i,typename T,typename...Args>
+struct ContractionTraits<i,T,Args...>: public ContractionTraits<i+1,Args...>{
+    static const size_t tensor_number=i;
+    static const size_t my_rank=T::my_rank;
+    static const size_t sum_of_ranks=T::my_rank+ContractionTraits<i+1,Args...>::sum_of_ranks;
+    using idx_array_t=std::array<C_String,sum_of_ranks>;
+    using tensor_t= typename T::Tensor_Type;
+};
+
+template<size_t i>
+struct ContractionTraits<i>{
+    static const size_t tensor_number=i;
+    static const size_t my_rank=0;
+    static const size_t sum_of_ranks=0;
+};
+
+
+///Recursion to get rank of tensor j
+template<size_t n,typename...Args> constexpr
+typename std::enable_if<n == sizeof...(Args), size_t>::type
+get_rank(size_t,const std::tuple<Args...>&)
 {
-    std::array<std::string,N> rv=std::array<std::string,N>();
-    std::stringstream ss(idx);
-    char val;
-    size_t i=0;
-    while (ss >> val)
-    {
-        rv[i]+=val;
-        while(ss.peek() == ' ')
-            ss.ignore();
-        if (ss.peek() == ',')
-        {
-            ++i;
-            ss.ignore();
-        }
-
-    }
-    return rv;
-
+   return 0;
 }
 
-
-/** \brief Updates our contraction information given the new index list
- *
- *  Basically we loop over the indices, if they're in idx2int we've seen it
- *  before and that means it's a repeated index and will be contracted over.
- *  If it's not in that list it's a new index and needs to be recorded.  This
- *  logic is sound even for repeated indices on the same tensor.
- */
-template<size_t rank>
-void add_contraction(const std::array<std::string,rank>& idx,
-                     std::map<std::string,size_t>& idx2int,
-                     std::set<std::string>& idx2contract)
+template<size_t n,typename...Args> constexpr
+typename std::enable_if<n < sizeof...(Args), size_t>::type
+get_rank(size_t j,const std::tuple<Args...>& tuple)
 {
-    for(const auto& x: idx)
-    {
-        if(idx2int.count(x))//Seen it so it's a contraction index
-            idx2contract.insert(x);
-        else//Not seen it so it needs added
-            idx2int.emplace(x,idx2int.size());
-    }
+    if(n==j)
+        return ContractionTraits<n,Args...>::my_rank;
+    else
+        return get_rank<n+1>(j,tuple);
 }
+
+///Recursion to get index i of tensor j
+template<size_t n,typename...Args> constexpr
+typename std::enable_if<n == sizeof...(Args), C_String>::type
+get_index(size_t,size_t,const std::tuple<Args...>&)
+{
+   return C_String{};
+}
+
+template<size_t n,typename...Args> constexpr
+typename std::enable_if<n < sizeof...(Args), C_String>::type
+get_index(size_t i,size_t j,const std::tuple<Args...>& tuple)
+{
+    if(n==j)
+        return std::get<n>(tuple).idx_.idx_[i];
+    else
+        return get_index<n+1>(i,j,tuple);
+}
+
+template<size_t n,typename...Args> constexpr
+typename std::enable_if<n == sizeof...(Args), size_t>::type
+get_position(C_String,size_t,const std::tuple<Args...>&)
+{
+    return 0;
+}
+
+template<size_t n,typename...Args> constexpr
+typename std::enable_if<n < sizeof...(Args), size_t>::type
+get_position(C_String idx,size_t j,const std::tuple<Args...>& tuple)
+{
+    if(n==j){
+        const auto& tensor = std::get<n>(tuple);
+        for(size_t i=0;i<tensor.get_rank();++i)
+            if(tensor.idx_.idx_[i]==idx)
+                return i;
+    }
+    return get_position<n+1>(idx,j,tuple);
+}
+
+template<typename...Args> constexpr
+size_t sum_of_ranks(const std::tuple<Args...>&)
+{
+    return ContractionTraits<0,Args...>::sum_of_ranks;
+}
+
+template<typename...Args> constexpr
+typename ContractionTraits<0,Args...>::idx_array_t
+get_indices(const std::tuple<Args...>& tuple)
+{
+    typename ContractionTraits<0,Args...>::idx_array_t idxs_{};
+    for(size_t i=0,counter=0;i<sizeof...(Args);++i)
+        for(size_t j=0; j<get_rank<0>(i,tuple);++j,++counter)
+            idxs_[counter]=get_index<0>(j,i,tuple);
+    return idxs_;
+}
+
 
 }//End namespace detail
 
+///A compile-time class for wrapping the index string the user provided
 template <size_t rank>
 struct Indices{
-    const std::array<detail_::C_String,rank> idx_;
+    using String_t=detail_::C_String;
+    const std::array<String_t,rank> idx_;
+
+
+    ///Makes a new Indices object from a string literal
     template<size_t N>
     constexpr Indices(const char(&arr)[N]):
         idx_(detail_::parse_idx<rank>(arr))
     {}
 };
 
-
+///A wrapper around the tensor and its indices
 template<size_t rank,typename Tensor_t>
 struct IndexedTensor{
     const Tensor_t& tensor_;
-    const std::array<std::string,rank> idx_;
-    IndexedTensor(const Tensor_t& tensor,const char* idx):
-        tensor_(tensor),idx_(detail_::split_comma<rank>(idx))
+    const Indices<rank> idx_;
+    static const size_t my_rank=rank;
+    using Tensor_Type=Tensor_t;
+    constexpr size_t get_rank()const
+    {
+        return rank;
+    }
+
+    template<size_t N> constexpr
+    IndexedTensor(const Tensor_t& tensor, const char(&idx)[N]):
+        tensor_(tensor),idx_(idx)
     {}
+
+    constexpr size_t get_index(const detail_::C_String& stridx)const{
+        for(size_t i=0;i<idx_.idx_.size();++i)
+            if(idx_.idx_[i]==stridx)return i;
+        return idx_.idx_.size();
+    }
 };
 
-template<typename LHS_t, typename RHS_t>
+///Description of a contraction
+template<typename...Args>
 struct Contraction{
-    const LHS_t& lhs_;
-    const RHS_t& rhs_;
-    std::map<std::string,size_t> idx2int_;
-    std::set<std::string> idx2contract_;
+private:
+    //There's a bit of code duplication between this and the next function
 
-    ///Our first pair of indexed tensors
-    template<size_t rank_lhs, size_t rank_rhs,typename _LHS_t,typename _RHS_t>
-    Contraction(const IndexedTensor<rank_lhs,_LHS_t>& lhs,
-                const IndexedTensor<rank_rhs,_RHS_t>& rhs):
-        lhs_(lhs),rhs_(rhs)
+    ///Returns the number of free indices if want_free==true otherwise the
+    ///number of indices in the contraction
+    constexpr size_t index_count_kernel(bool want_free)const
     {
-        detail_::add_contraction<rank_lhs>(lhs.idx_,idx2int_,idx2contract_);
-        detail_::add_contraction<rank_rhs>(rhs.idx_,idx2int_,idx2contract_);
+        auto indices=detail_::get_indices(tensors_);
+        std::set<detail_::C_String> free;
+        std::set<detail_::C_String> contract;
+        for(size_t i=0;i<indices.size();++i)
+        {
+            const auto& x=indices[i];
+            if(contract.count(x))continue;
+            for(size_t j=0;j<indices.size();++j)
+            {
+                if(i==j)continue;
+                if(x==indices[j])
+                {
+                    contract.insert(x);
+                    break;
+                }
+            }
+            if(!contract.count(x))
+                free.insert(x);
+         }
+        return want_free?free.size():contract.size();
     }
 
-    ///LHS_t is a contraction, take it's information
-    template<size_t rank,typename _RHS_t,typename T1, typename T2>
-    Contraction(const Contraction<T1,T2>& lhs,
-                const IndexedTensor<rank,_RHS_t>& rhs):
-        lhs_(lhs),rhs_(rhs),
-        idx2int_(std::move(lhs.idx2int_)),
-        idx2contract_(std::move(lhs.idx2contract_))
+    ///Similar to above, except returns the k-th index of the desired type
+    constexpr detail_::C_String index_get_kernel(size_t k,bool want_free)const
     {
-        detail_::add_contraction<rank>(rhs.idx_,idx2int_,idx2contract_);
+        auto indices=detail_::get_indices(tensors_);
+        std::set<detail_::C_String> free;
+        std::set<detail_::C_String> contract;
+        for(size_t i=0;i<indices.size();++i)
+        {
+            const auto& x=indices[i];
+            if(contract.count(x))continue;
+            for(size_t j=0;j<indices.size();++j)
+            {
+                if(i==j)continue;
+                if(x==indices[j])
+                {
+                    if(contract.size()==k && !want_free)
+                        return x;
+                    contract.insert(x);
+                    break;
+                }
+            }
+            if(!contract.count(x))
+            {
+                if(free.size()==k && want_free)
+                    return x;
+                free.insert(x);
+            }
+         }
+        return detail_::C_String{};
     }
 
-    ///RHS_t is a contraction, take it's information
-    template<size_t rank, typename _LHS_t,typename T1, typename T2>
-    Contraction(const IndexedTensor<rank,_LHS_t>& lhs,
-                const Contraction<T1,T2>& rhs):
-        lhs_(lhs),rhs_(rhs),
-        idx2int_(std::move(rhs.idx2int_)),
-        idx2contract_(std::move(rhs.idx2contract_))
+public:
+    ///The actual tensors
+    const std::tuple<Args...> tensors_;
+
+    using idx_array_t=typename detail_::ContractionTraits<0,Args...>::idx_array_t;
+    using idx_count_array_t=typename std::array<size_t,detail_::ContractionTraits<0,Args...>::sum_of_ranks>;
+
+    constexpr Contraction(const std::tuple<Args...>& tensors):
+        tensors_(tensors)
+    {}
+
+    constexpr idx_array_t get_indices()const
     {
-        detail_::add_contraction<rank>(lhs.idx_,idx2int_,idx2contract_);
+        return detail_::get_indices(tensors_);
     }
+
+    ///Returns the number of tensors in the contraction
+    constexpr size_t n_tensors()const{
+        return std::tuple_size<std::tuple<Args...>>::value;
+    }
+
+    ///Returns the rank of tensor i
+    constexpr size_t rank(const size_t i)const
+    {
+        return detail_::get_rank<0>(i,tensors_);
+    }
+
+    ///Returns the i-th index of the j-th tensor
+    constexpr detail_::C_String get_index(size_t i,size_t j)const{
+        return detail_::get_index<0>(i,j,tensors_);
+    }
+
+    ///Returns the number of free indices
+    constexpr size_t n_free_indices()const
+    {
+       return index_count_kernel(true);
+    }
+
+    ///Returns the number of indices involved in contractions
+    constexpr size_t n_contraction_indices()const
+    {
+       return index_count_kernel(false);
+    }
+
+    ///Returns the i-th free index
+    constexpr detail_::C_String free_index(size_t i)const
+    {
+        return index_get_kernel(i,true);
+    }
+
+    ///Returns the i-th contraction index
+    constexpr detail_::C_String contraction_index(size_t i)const
+    {
+        return index_get_kernel(i,false);
+    }
+
+    ///Returns the position of index in the i-th tensor
+    constexpr size_t get_position(const detail_::C_String& idx, size_t i)const
+    {
+        return detail_::get_position<0>(idx,i,tensors_);
+    }
+
 };
 
+///Given a contraction returns an array of the indices to be contracted over
+template<typename...Args>
+std::vector<detail_::C_String> get_contraction_list(const Contraction<Args...>& ct)
+{
+    const size_t ncontract=ct.n_contraction_indices();
+    std::vector<detail_::C_String> idx(ncontract);
+    for(size_t i=0;i<ncontract;++i)
+        idx[i]=ct.contraction_index(i);
+    return idx;
 }
 
-template<size_t rank_lhs, size_t rank_rhs, typename LHS_t, typename RHS_t>
-TWrapper::Contraction<TWrapper::IndexedTensor<rank_lhs,LHS_t>,
-                      TWrapper::IndexedTensor<rank_rhs,RHS_t>>
-operator*(const TWrapper::IndexedTensor<rank_lhs,LHS_t>& lhs,
-          const TWrapper::IndexedTensor<rank_rhs,RHS_t>& rhs)
+///Given a contraction returns an array of the indices remaining after contraction
+template<typename...Args>
+std::vector<detail_::C_String> get_free_list(const Contraction<Args...>& ct)
 {
-    return TWrapper::Contraction<
-            TWrapper::IndexedTensor<rank_lhs,LHS_t>,
-            TWrapper::IndexedTensor<rank_rhs,RHS_t>>(lhs,rhs);
+    const size_t n_free=ct.n_free_indices();
+    std::vector<detail_::C_String> idx_(n_free);
+    for(size_t i=0;i<n_free;++i)
+        idx_[i]=ct.free_index(i);
+    return idx_;
 }
 
-template<size_t rank, typename LHS_t, typename RHS_t>
-TWrapper::Contraction<LHS_t,TWrapper::IndexedTensor<rank,RHS_t>>
-operator*(const LHS_t& lhs,
-          const TWrapper::IndexedTensor<rank,RHS_t>& rhs)
+
+
+}//End namespace TWrapper
+
+///Makes the first contraction in a series
+template<size_t lhs_rank,typename LHS_t,size_t rhs_rank,typename RHS_t>
+constexpr TWrapper::Contraction<TWrapper::IndexedTensor<lhs_rank,LHS_t>,
+                      TWrapper::IndexedTensor<rhs_rank,RHS_t>>
+operator*(const TWrapper::IndexedTensor<lhs_rank,LHS_t>& lhs,
+          const TWrapper::IndexedTensor<rhs_rank,RHS_t>& rhs)
 {
-    return TWrapper::Contraction<LHS_t,TWrapper::IndexedTensor<rank,RHS_t>>(lhs,rhs);
+    return TWrapper::Contraction<TWrapper::IndexedTensor<lhs_rank,LHS_t>,
+            TWrapper::IndexedTensor<rhs_rank,RHS_t>>(std::make_tuple(lhs,rhs));
 }
 
-template<size_t rank, typename LHS_t, typename RHS_t>
-TWrapper::Contraction< TWrapper::IndexedTensor<rank,LHS_t>,RHS_t>
-operator*(const TWrapper::IndexedTensor<rank,LHS_t>& lhs,
-          const RHS_t& rhs)
+///Makes second and on up contractions
+template<size_t rank,typename Tensor_t,typename...Args>constexpr
+TWrapper::Contraction<Args...,TWrapper::IndexedTensor<rank,Tensor_t>>
+operator*(const TWrapper::Contraction<Args...>& lhs,
+          const TWrapper::IndexedTensor<rank,Tensor_t>& rhs)
 {
-    return TWrapper::Contraction<TWrapper::IndexedTensor<rank,LHS_t>,RHS_t>(lhs,rhs);
+    return TWrapper::Contraction<Args...,TWrapper::IndexedTensor<rank,Tensor_t>>
+                (std::tuple_cat(lhs.tensors_,std::make_tuple(rhs)));
+}
+
+///Allows printing of C_String
+std::ostream& operator<<(std::ostream& os,const TWrapper::detail_::C_String& str)
+{
+    for(size_t i=0;i<str.size();++i)
+        os<<str[i];
+    return os;
 }
