@@ -1,3 +1,3 @@
-if(${ENABLE_STRESSTESTS})
+if(${ENABLE_STRESS_TESTS})
    NEW_TEST(StressTestEigen StressTests)
 endif()
