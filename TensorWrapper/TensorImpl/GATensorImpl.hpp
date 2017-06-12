@@ -120,7 +120,7 @@ GATensor<rank,T>::GATensor(GATensor<rank,T>&& other):
     scale_(1.0),
     transposed_(std::move(other.transposed_))
 {
-    handle_=nullptr;
+    other.handle_=nullptr;
 }
 
 template<size_t rank,typename T>
