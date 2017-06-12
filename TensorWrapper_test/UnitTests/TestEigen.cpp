@@ -35,5 +35,22 @@ int main()
     tensor_type _G=_E*0.5;
     tester.test("Tensor dimensions are correct",_G.dims()==corr_shape);
     tester.test("Tensors are same",_G==G);
+
+    wrapped_type H=G*E;
+    tensor_type _H=_G("i,j")*_E("j,k");
+    tester.test("G * E",H==_H);
+
+    wrapped_type I=G.transpose()*E;
+    tensor_type _I=_G("j,i")*_E("j,k");
+    tester.test("G^T * E",I==_I);
+
+    wrapped_type J=G*E.transpose();
+    tensor_type _J=_G("i,j")*_E("k,j");
+    tester.test("G * E^T",J==_J);
+
+    wrapped_type K=G.transpose()*E.transpose();
+    tensor_type _K=_G("j,i")*_E("k,j");
+    tester.test("G^T * E^T",K==_K);
+
     return tester.results();
 }

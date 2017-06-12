@@ -1,0 +1,44 @@
+#Get the root of the install (this is done on an installed copy)
+# This file is installed int root/share/cmake/TensorWrapper
+set(TW_PREFIX "${CMAKE_CURRENT_LIST_DIR}") #in TensorWrapper/
+get_filename_component(TW_PREFIX "${TW_PREFIX}" DIRECTORY) # in cmake/
+get_filename_component(TW_PREFIX "${TW_PREFIX}" DIRECTORY) # in share/
+get_filename_component(TW_PREFIX "${TW_PREFIX}" DIRECTORY) # in root/
+
+#Find external dependencies
+find_package(Eigen3 REQUIRED)
+message(STATUS "Eigen3 includes: ${EIGEN3_INCLUDE_DIRS}")
+foreach(pkg @EXTERNAL_FEATURES@)
+    find_package(${pkg} REQUIRED)
+    message(STATUS "${pkg} libraries: ${${pkg}_LIBRARIES}")
+    message(STATUS "${pkg} includes: ${${pkg}_INCLUDE_DIRS}")
+    list(APPEND EXTERNAL_INCLUDE_DIRS ${${pkg}_INCLUDE_DIRS})
+    list(APPEND EXTERNAL_LIBRARIES ${${pkg}_LIBRARIES})
+    set(ENABLE_${pkg} TRUE)
+endforeach()
+#These packages require MPI
+if(${ENABLE_GlobalArrays})
+   find_package(MPI)
+   list(APPEND EXTERNAL_INCLUDE_DIRS ${MPI_INCLUDE_DIRS})
+   list(APPEND EXTERNAL_LIBRARIES ${MPI_LIBRARIES})
+endif()
+#GA requires Fortran and makes us have an actual library
+if(${ENABLE_GlobalArrays})
+    set(TensorWrapper_LIBRARY ${TW_PREFIX}/lib/libTensorWrapper.a)
+    list(APPEND EXTERNAL_LIBRARIES @Fortran_EXTERNAL_LIBRARIES@)
+endif()
+
+
+set(TensorWrapper_INCLUDE_DIR ${TW_PREFIX}/include)
+message(STATUS "TensorWrapper includes: ${TensorWrapper_INCLUDE_DIR}")
+add_library(TensorWrapper INTERFACE)
+set(TensorWrapper_INCLUDE_DIRS ${TensorWrapper_INCLUDE_DIR}
+                               ${EIGEN3_INCLUDE_DIRS}
+                               ${EXTERNAL_LIBRARIES}
+)
+set(TensorWrapper_LIBRARIES    ${TensorWrapper_LIBRARY}
+                               ${EXTERNAL_LIBRARIES}
+)
+target_include_directories(TensorWrapper INTERFACE
+                                               "${TensorWrapper_INCLUDE_DIRS}")
+target_link_libraries(TensorWrapper INTERFACE "${TensorWrapper_LIBRARIES}")

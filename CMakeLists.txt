@@ -1,14 +1,18 @@
 cmake_minimum_required(VERSION 3.1)
 project(TensorWrapper-superbuild CXX)
 include(ExternalProject)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(cmake/cmake_macros.cmake)
 find_package(Eigen3 REQUIRED)
+
 ############################
-# Build type
+# Options
 ############################
-# Default to Release if build type not specified
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release")
-endif()
+
+#Enable Global Arrays backend?
+option_w_default(ENABLE_GA FALSE)
+#Debug or Release build?
+option_w_default(CMAKE_BUILD_TYPE "Release")
 
 ##################################################
 # Where stuff will be installed. This is passed
@@ -20,26 +24,39 @@ endif()
 set(STAGE_DIR            "${CMAKE_BINARY_DIR}/stage")
 set(STAGE_INSTALL_PREFIX "${STAGE_DIR}${CMAKE_INSTALL_PREFIX}")
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-
 # Where targets should search for dependencies
 # Ie, the original CMAKE_PREFIX_PATH, plus the installation stage
 list(APPEND CMAKE_PREFIX_PATH ${STAGE_INSTALL_PREFIX})
 
-#TODO: actually use CMake to do this
+add_subdirectory(external)
+
+message(STATUS "Enabled external features:  ${EXTERNAL_FEATURES}" )
+
+#####################################################
+#  Main Build
+#####################################################
+
+add_extra_arg(TWRAPPER_EXTRA_ARGS EXTERNAL_LIBRARIES)
+add_extra_arg(TWRAPPER_EXTRA_ARGS EXTERNAL_INCLUDE_DIR)
 
 ExternalProject_Add(TensorWrapper
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/TensorWrapper
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+               -DTWRAPPER_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
+               ${TWRAPPER_EXTRA_ARGS}
     BUILD_ALWAYS 1
     INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install DESTDIR=${STAGE_DIR}
     CMAKE_CACHE_ARGS -DCMAKE_PREFIX_PATH:LIST=${CMAKE_PREFIX_PATH}
                      -DCMAKE_INSTALL_RPATH:LIST=${CMAKE_INSTALL_RPATH}
                      -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
                      -DCMAKE_MODULE_PATH:LIST=${CMAKE_MODULE_PATH}
+                     -DEXTERNAL_FEATURES:LIST=${EXTERNAL_FEATURES}
 )
+
+add_dependencies(TensorWrapper GlobalArrays_external)
+
 ###############################
 # Tests
 ###############################
@@ -56,6 +73,7 @@ ExternalProject_Add(TensorWrapper_test
     CMAKE_CACHE_ARGS -DCMAKE_PREFIX_PATH:LIST=${CMAKE_PREFIX_PATH}
                      -DCMAKE_INSTALL_RPATH:LIST=${CMAKE_INSTALL_RPATH}
                      -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
+                     -DCMAKE_MODULE_PATH:LIST=${CMAKE_MODULE_PATH}
 )
 add_dependencies(TensorWrapper_test TensorWrapper)
 
@@ -68,6 +86,11 @@ file(WRITE ${CMAKE_BINARY_DIR}/CTestTestfile.cmake "subdirs(test_stage)")
 # Install the staging directory
 install(DIRECTORY ${CMAKE_BINARY_DIR}/stage/${CMAKE_INSTALL_PREFIX}/
         DESTINATION ${CMAKE_INSTALL_PREFIX} USE_SOURCE_PERMISSIONS)
+
+#Install our header files
+install(DIRECTORY "cmake"
+        DESTINATION share/cmake
+        FILES_MATCHING REGEX ".*\.cmake")
 
 #####################
 # uninstall target

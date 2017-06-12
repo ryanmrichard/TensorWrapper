@@ -1,3 +1,6 @@
+if(${ENABLE_GlobalArrays})
+    NEW_TEST(TestGATensor UnitTests)
+endif()
 NEW_TEST(TestEigen UnitTests)
 NEW_TEST(TestEigenTensor UnitTests)
 NEW_TEST(TestContraction UnitTests)

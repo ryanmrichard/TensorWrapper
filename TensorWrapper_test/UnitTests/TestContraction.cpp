@@ -17,6 +17,7 @@ const std::map<std::string,size_t> corr_c2_map({{"i",0},{"j",1},
                                                 {"m",4},{"n",5}});
 int main()
 {
+
     Tester tester("Testing Einstein notation/Contraction wrapper");
 
     //Compile time string parsing checks
@@ -41,31 +42,38 @@ int main()
     tester.test("C_str split works",just_k.size()==1);
 
     Indices<3> idx("i,j,k");
-    tester.test("Indices work",idx.idx_[0]==just_i);
-    tester.test("Indices work",idx.idx_[1]==just_j);
-    tester.test("Indices work",idx.idx_[2]==just_k);
+    tester.test("Indices constructor",idx.idx_[0]==just_i);
+    tester.test("Indices constructor",idx.idx_[1]==just_j);
+    tester.test("Indices constructor",idx.idx_[2]==just_k);
 
     Eigen::MatrixXd A=Eigen::MatrixXd::Zero(10,10);
-    IndexedTensor<3,wrapped_type> syms(A,"i,j,k");
-    tester.test("Simple indices",corr_1==syms.idx_);
-    IndexedTensor<3,wrapped_type> syms2(A,"ij,jam,klm");
-    tester.test("Harder indices",corr_2==syms2.idx_);
-    IndexedTensor<3,wrapped_type> syms3(A,"ij , jam , klm");
-    tester.test("Harder indices with spaces",corr_2==syms3.idx_);
-    IndexedTensor<3,wrapped_type> syms4(A,"ij, jam ,klm");
-    tester.test("Harder indices with erratic spacing",corr_2==syms4.idx_);
-    IndexedTensor<3,wrapped_type> syms5(A," ij, jam ,klm");
-    tester.test("Indices start with space",corr_2==syms5.idx_);
-    IndexedTensor<3,wrapped_type> syms6(A," i j , j a m  , k l m ");
-    tester.test("Space crazy",corr_2==syms6.idx_);
+    IndexedTensor<2,wrapped_type> T1(A,"i,k");
+    IndexedTensor<2,wrapped_type> T2(A,"k,l");
+    IndexedTensor<2,wrapped_type> T3(A,"l,j");
 
-    IndexedTensor<3,wrapped_type> syms_(A,"l,i,k");
-    auto c1=syms*syms_;
-    tester.test("Contraction indices",c1.idx2contract_==corr_c1);
-    tester.test("Contraction idices map",c1.idx2int_==corr_c1_map);
-    IndexedTensor<3,wrapped_type> syms_2(A,"m,l,n");
-    auto c2=syms*syms_*syms_2;
-    tester.test("Nested contraction indices",c2.idx2contract_==corr_c2);
-    tester.test("Nested contraction idices map",c2.idx2int_==corr_c2_map);
+    auto c1=T1*T2;
+    tester.test("NTensors",c1.n_tensors()==2);
+    tester.test("Get idx 0 tensor 0",c1.get_index(0,0)==just_i);
+    tester.test("Get idx 1 tensor 0",c1.get_index(1,0)==just_k);
+    tester.test("Get idx 0 tensor 1",c1.get_index(0,1)==just_k);
+    tester.test("position 0 tensor 0",c1.get_position(just_i,0)==0);
+    tester.test("position 1 tensor 0",c1.get_position(just_k,0)==1);
+    tester.test("position 0 tensor 1",c1.get_position(just_k,1)==0);
+    tester.test("NFree",c1.n_free_indices()==2);
+    tester.test("NContract",c1.n_contraction_indices()==1);
+
+    auto c2=T1*T2*T3;
+    tester.test("NTensors",c2.n_tensors()==3);
+    tester.test("Get idx 0 tensor 0",c2.get_index(0,0)==just_i);
+    tester.test("Get idx 1 tensor 0",c2.get_index(1,0)==just_k);
+    tester.test("Get idx 0 tensor 1",c2.get_index(0,1)==just_k);
+    tester.test("Get idx 1 tensor 2",c2.get_index(1,2)==just_j);
+    tester.test("position 0 tensor 0",c2.get_position(just_i,0)==0);
+    tester.test("position 1 tensor 0",c2.get_position(just_k,0)==1);
+    tester.test("position 0 tensor 1",c1.get_position(just_k,1)==0);
+    tester.test("position 1 tensor 2",c2.get_position(just_j,2)==1);
+    tester.test("NFree",c2.n_free_indices()==2);
+    tester.test("NContract",c2.n_contraction_indices()==2);
+
     return tester.results();
 }
