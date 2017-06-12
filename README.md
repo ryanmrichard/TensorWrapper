@@ -63,11 +63,12 @@ TensorWrapper tries to comply with the typical CMake configuration process, to
 that end a command along the lines of:
 
 ~~~.sh
-cmake -H. -Bbuild -DOPTION_1-VALUE1 -DOPTION_2=VALUE2 ...
+cmake -H. -Bbuild -DOPTION_1=VALUE1 -DOPTION_2=VALUE2 ...
 ~~~
 
 should be sufficient to configure TensorWrapper.  To this end here are some
 helpful, standard, CMake options that can be used to fine tune the build.
+
 --------------------------------------------------------------------------------
 | CMake Variable | Description                                                 |
 | :------------: | :-----------------------------------------------------------|
@@ -116,7 +117,7 @@ make install
 ~~~
 
 Testing
-_______
+-------
 
 TensorWrapper includes two forms of tests, unit tests for ensuring everything
 works and stress tests for ensuring TensorWrapper has a minimal overhead at
