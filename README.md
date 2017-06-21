@@ -2,7 +2,7 @@ TensorWrapper
 =============
 
 At the moment there are several competing tensor libraries.  Consequentially,
-each developer has their preferance.  Particularly in a communial code base like
+each developer has their preferance.  Particularly in a communal code base like
 that of computational chemistry, this makes it hard to use libraries written by
 other developers if they use a different tensor library.  Additionally, all of
 the tensor libraries have a slightly different syntax which means one has to
