@@ -66,13 +66,6 @@ void GAInitialize(int heap=-1, int stack=-1);
  *  STL container that stores its elements contigouously (i.e. vector, array,
  *  deque, etc.)
  *
- *  This class is const correct in the literal sense that if a
- *  function does not modify this class it is marked as const.
- *  This is somewhat paradoxical as it means that functions like
- *  fill do not modify this class because under the hood the
- *  class does not actually contain the memory, but rather only knows
- *  how to get at it.
- *
  *  Despite the GA library supporting arbitrary rank tensors, most of it
  *  actually focuses on matrices.  As a result in a few places (notably for
  *  multiplication and transpose) I have used a nomeclature indicative of that.
@@ -97,11 +90,10 @@ void GAInitialize(int heap=-1, int stack=-1);
  *  Since as far as the user is concerned we have already scaled the array we
  *  go ahead and tell GA to scale the array and then set the values.
  *
- *  We do a similar trick for the transpose.  Basically calling transpose flips
- *  a flag.  The transpose is then only applied when needed.  Unfortunately,
- *  unlike scaling, transpose only enters into GEMM meaning there are a lot
- *  more places in the implementation where we need to force the transpose.
- *
+ *  We should do a similar trick for the transpose, but at the moment I do not
+ *  as this moves more into expression templating than I care to do at the
+ *  moment.  Basically how this would work is that calling transpose
+ *  flips  a flag.  The transpose is then only applied when needed.
  *
  *  \tparam rank The rank of the tensor
  *  \tparam T The type of an element
@@ -109,6 +101,16 @@ void GAInitialize(int heap=-1, int stack=-1);
 template<size_t rank,typename T>
 class GATensor{
 public:
+
+    /** \brief Makes a placeholder GATensor
+     *
+     *  Many algorithms assume that a class is default constructable simply to
+     *  get a placeholder variable.  This constructor will create a GATensor
+     *  that is not useable aside from being a placeholder.  To make the
+     *  instance usable one must assign an already useable instance to it.
+     *
+     */
+    GATensor()=default;
 
     /** \brief Makes a GATensor from an existing handle
      *
@@ -199,12 +201,7 @@ public:
      *
      *  \return This instance now populated by a deep copy of \p other.
      */
-    GATensor& operator=(const GATensor<rank,T>& other)
-    {
-        GATensor<rank,T> temp(other);
-        std::swap(*this,temp);
-        return *this;
-    }
+    GATensor& operator=(const GATensor<rank,T>& other);
 
     /** \brief Takes ownership of another GATensor
      *
@@ -295,7 +292,7 @@ public:
      *
      *  \param[in] value The value each element of the tensor will be set to
      */
-    void fill(T value)const;
+    void fill(T value);
 
     /** \brief Returns a single value
      *
@@ -349,25 +346,42 @@ public:
     template<typename Cont_t1, typename Cont_t2>
     std::vector<T> get_values(const Cont_t1& low, const Cont_t2& high)const;
 
+    ///The type of a pair of starting and stopping indices
+    using slice_range_t=std::pair<std::array<size_t,rank>,
+                                  std::array<size_t,rank>>;
 
-    /** \brief Transposes the current matrix
+    /** \brief Returns the starting and stopping indices of the slice of the
+     *         tensor held in local memory.
      *
-     *  This operation is actually done via lazy evalution, we just flip the
-     *  transpose flag and wait until we need to actually do the transpose.
-     *  Although, we could do this check at compile time, doing so would
-     *  significantly limit the utility of this class.
+     *
+     *   In a distributed environment only part of the tensor will actually be
+     *   in the memory of the current node.  This function tells you want range
+     *   that is.  This is useful for getting/setting as it allows you to only
+     *   work with local memory.
+     *
+     *  \return Two "rank" element arrays where element "i" in the first array
+     *          is the first offset along the "i" direction held in local memory
+     *          and element "i" in the second array is the first element not
+     *          held in local memory.
+     */
+    slice_range_t my_slice()const;
+
+    /** \brief Returns the transpose of the current matrix
+     *
+     *  This operation should actually be done via lazy evalution, by flipping
+     *  the transpose flag in some form of wrapper class and then waiting until
+     *  we need to actually do the transpose.  As implementing expression
+     *  templating is beyond the scope of the current class, we simply actually
+     *  do the transpose here.
+     *
+     *  \note Although, we could do the check for rank>2 at compile time, doing
+     *        so would significantly limit the utility of this class.
      *
      *  \throws If transpose is not defined for this tensor's rank.
      *
      *  \return The current matrix, transposed.
      */
-    GATensor<rank,T>& transpose(){
-        if(rank>2)
-            throw std::runtime_error("Transpose not for tensors of rank >2");
-        transposed_=!transposed_;
-        return *this;
-    }
-
+    GATensor<rank,T> transpose()const;
 
     /** \brief Adds two GATensors
      *
@@ -450,6 +464,29 @@ public:
     typename std::enable_if<rank==2,GATensor<2, T>>::type
     operator*(const GATensor<2,T>& rhs)const;
 
+    /** \brief Returns true if the underlying tensor is exactly equal to rhs
+     *
+     *   This call will perform an element by element comparision to ensure
+     *   that the two tensors are the same.  There is no tolerance on this scan,
+     *   i.e. usual double comparision caveats apply.  The primary
+     *   template accounts for all cases where rhs's rank is not equal to
+     *   this tensor's rank.  The specialization to equal ranks actually
+     *   performs the equality comparison.
+     *
+     *   \param[in] rhs The other tensor we are comparing too
+     *
+     *   \return True if all elements in this tensor are equal to those inside
+     *                \p rhs.
+     *
+     *   \tparam rank2 The rank of the tensor on the right side
+     */
+    bool operator==(const GATensor<rank,T>& rhs)const;
+
+    template<size_t rank2>
+    bool operator==(const GATensor<rank2,T>& /*rhs*/)const
+    {
+        return false;
+    }
 
     ///Returns the full dimensions of the tensor
     std::array<size_t,rank> dims()const{return dims_;}
@@ -479,15 +516,16 @@ private:
 
     ///The current scale factor
     T scale_;
-
-    ///Is the current matrix transposed
-    bool transposed_;
-
-    ///Returns the transpose of this (actually does the transpose)
-    GATensor<rank,T> transpose_()const;
-
 };
 
-#include "TensorWrapper/TensorImpl/GATensorImpl.hpp"
+#include "TensorWrapper/TensorImpl/GA_CXX/GATensorImpl.hpp"
 
 }//End namespace TWrapper
+
+template<size_t rank, typename T, typename T1>
+typename std::enable_if<std::is_fundamental<T1>::value,
+                        TWrapper::GATensor<rank,T>>::type
+operator*(T1 lhs, const TWrapper::GATensor<rank,T>& rhs)
+{
+    return rhs*lhs;
+}

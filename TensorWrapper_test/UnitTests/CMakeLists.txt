@@ -1,7 +1,9 @@
 if(${ENABLE_GlobalArrays})
     NEW_TEST(TestGATensor UnitTests)
+    NEW_TEST(TestGAWrapper UnitTests)
 endif()
-NEW_TEST(TestEigen UnitTests)
-NEW_TEST(TestEigenTensor UnitTests)
-NEW_TEST(TestContraction UnitTests)
-NEW_TEST(TestShape UnitTests)
+foreach(name TestEigen TestEigenTensor TestContraction TestConversions
+             TestShape TestMemory TestTensorPtr TestOperation
+)
+    NEW_TEST(${name} UnitTests)
+endforeach()

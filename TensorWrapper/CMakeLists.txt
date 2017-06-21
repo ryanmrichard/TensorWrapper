@@ -46,6 +46,7 @@ if(NOT TensorImpl_SRC STREQUAL "")
 else()
     add_library(TensorWrapper INTERFACE)
 endif()
+target_compile_definitions(TensorWrapper PUBLIC ${EXTERNAL_DEFINES})
 target_link_libraries(TensorWrapper PUBLIC ${EXTERNAL_LIBRARIES})
 target_include_directories(TensorWrapper PUBLIC ${TWRAPPER_ROOT}
                                                 ${EXTERNAL_INCLUDE_DIRS}

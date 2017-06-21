@@ -33,14 +33,13 @@ list(APPEND CMAKE_PREFIX_PATH ${STAGE_INSTALL_PREFIX})
 add_subdirectory(external)
 
 message(STATUS "Enabled external features:  ${EXTERNAL_FEATURES}" )
-
+message(STATUS "External defines: ${EXTERNAL_DEFINES}")
 #####################################################
 #  Main Build
 #####################################################
 
 add_extra_arg(TWRAPPER_EXTRA_ARGS EXTERNAL_LIBRARIES)
 add_extra_arg(TWRAPPER_EXTRA_ARGS EXTERNAL_INCLUDE_DIR)
-
 ExternalProject_Add(TensorWrapper
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/TensorWrapper
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
@@ -55,6 +54,7 @@ ExternalProject_Add(TensorWrapper
                      -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
                      -DCMAKE_MODULE_PATH:LIST=${CMAKE_MODULE_PATH}
                      -DEXTERNAL_FEATURES:LIST=${EXTERNAL_FEATURES}
+                     -DEXTERNAL_DEFINES:STRING=${EXTERNAL_DEFINES}
 )
 
 add_dependencies(TensorWrapper GlobalArrays_external)

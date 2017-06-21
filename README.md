@@ -18,12 +18,21 @@ gratitous usage of the `auto` keyword and then evaluating the expression when
 the user needs it (typically at assignment).  At the moment TensorWrapper does
 not apply any optimizations of its own.
 
+- [What TensorWrapper Does](#what-tensorwrapper-does)
 - [Supported Tensor Backends](#supported-tensor-backends)
 - [Installing](#installing)
   - [Obtaining](#obtaining)
   - [Configuring](#configuring)
   - [Building and Installing](#building-and-installing)
   - [Testing](#testing)
+
+What TensorWrapper Does
+=======================
+
+TensorWrapper is designed to abstract away the API differences between various
+tensor libraries.  This means as long as you use one of the supported backends
+TensorWrapper knows how to convert among the various libraries and perform
+common tensor operations.  For example
 
 Supported Tensor Backends
 =========================
@@ -103,7 +112,8 @@ Finally, these are the project dependent options:
 With the default options TensorWrapper only depends on the Eigen matrix/tensor
 libraries (they are bundled together) and is header-only.  Enabling other
 backends may impart additional dependencies, which are described in the table
-in the :link:[Supported Tensor Backends](#supported-tensor-backends) section.
+in the :link:[Supported Tensor Backends](#supported-tensor-backends) section and
+may require TensorWrapper to have an actual compiled library component.
 
 Building and Installing
 -----------------------
@@ -132,3 +142,15 @@ ctest
 
 in the build directory.  Stress tests can be enabled by setting the option
 `ENABLE_STRESS_TESTS` to true at configuration time.
+
+Adding TensorWrapper To Your Build
+==================================
+
+After a sucessful installation TensorWrapper will install a file
+`TensorWrapperConfig.cmake` in to the foler
+`CMAKE_INSTALL_PREFIX/share/cmake/TensorWrapper/`.  This file contains all of
+the necessary details for incorporating TensorWrapper into your project.  So
+long as `CMAKE_INSTALL_PREFIX` is part of your project's `CMAKE_PREFIX_PATH`
+variable CMake's `find_package` command will find TensorWrapper and create a
+new interface target `TensorWrapper`.  Simply add `TensorWrapper` to your
+target's libraries and includes and CMake should do the rest.

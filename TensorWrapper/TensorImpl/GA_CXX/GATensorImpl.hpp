@@ -74,6 +74,27 @@ std::array<int,rank> unit_stride()
     return rv;
 }
 
+template<size_t rank, size_t rank2, typename T>
+bool equal_kernel(size_t depth,
+                  std::array<size_t,rank>& idx,
+                  const std::array<size_t,rank>& dims,
+                  const GATensor<rank,T>& lhs,
+                  const GATensor<rank2,T>& rhs)
+{
+    if(depth==rank)
+        return lhs.get_values(idx)==rhs.get_values(idx);
+
+    for(size_t i=0;i<dims[depth];++i)
+    {
+        idx[depth]=i;
+        for(size_t j=depth+1;j<rank;++j)
+            idx[j]=0;
+        if(!equal_kernel(depth+1,idx,dims,lhs,rhs))
+            return false;
+    }
+    return true;
+}
+
 }//End namespace detail
 
 template<size_t rank, typename T>
@@ -84,8 +105,7 @@ GATensor<rank,T>::GATensor(const Cont_t1& dims,
     handle_(std::make_unique<int>(GA_Create_handle())),
     dims_(detail_::to_array<rank,size_t>(dims)),
     chunks_(detail_::to_array<rank,size_t>(chunks)),
-    scale_(1.0),
-    transposed_(false)
+    scale_(1.0)
 
 {
     //This is just a buffer for converted containers
@@ -106,10 +126,7 @@ GATensor<rank,T>::GATensor(const GATensor<rank,T>& other):
     GATensor<rank,T>(other.dims_,other.chunks_,nullptr)
 {
     scale_=other.scale_;
-    if(!other.transposed_)
-        GA_Copy(*other.handle_,*handle_);
-    else
-        GA_Transpose(*other.handle_,*handle_);
+    GA_Copy(*other.handle_,*handle_);
 }
 
 template<size_t rank,typename T>
@@ -117,21 +134,33 @@ GATensor<rank,T>::GATensor(GATensor<rank,T>&& other):
     handle_(std::move(other.handle_)),
     dims_(std::move(other.dims_)),
     chunks_(std::move(other.chunks_)),
-    scale_(1.0),
-    transposed_(std::move(other.transposed_))
+    scale_(1.0)
 {
     other.handle_=nullptr;
 }
 
 template<size_t rank,typename T>
 GATensor<rank,T>& GATensor<rank,T>::operator=(GATensor<rank,T>&& other){
-    if(handle_)
+    if(handle_){
         GA_Destroy(*handle_);
+        handle_=nullptr;
+    }
     handle_=std::move(other.handle_);
     dims_=std::move(other.dims_);
     chunks_=(std::move(other.chunks_));
     scale_=(std::move(other.scale_));
-    transposed_=(std::move(other.transposed_));
+    return *this;
+}
+
+template<size_t rank,typename T>
+GATensor<rank,T>& GATensor<rank,T>::operator=(const GATensor<rank,T>& other)
+{
+    if(handle_){
+        GA_Destroy(*handle_);
+        handle_=nullptr;
+    }
+    GATensor<rank,T> temp(other);
+    std::swap(*this,temp);
     return *this;
 }
 
@@ -150,11 +179,6 @@ void GATensor<rank,T>::set_values(const Cont_t1& low, const Cont_t2& high, const
     {
         GA_Scale(*handle_,&scale_);
         scale_=1.0;
-    }
-    if(transposed_)
-    {
-        *this=std::move(transpose_());
-        transposed_=false;
     }
     auto ga_high=detail_::to_array<rank,int>(detail_::subtract_1<T>(high));
     auto ga_low=detail_::to_array<rank,int>(low);
@@ -177,7 +201,7 @@ std::vector<T> GATensor<rank,T>::get_values(const Cont_t1& low, const Cont_t2& h
     auto ga_high=detail_::to_array<rank,int>(detail_::subtract_1<T>(high));
     auto ga_low=detail_::to_array<rank,int>(low);
     auto strides=detail_::unit_stride<rank>();
-    NGA_Get(!transposed_?*handle_:*transpose_().handle_,
+    NGA_Get(*handle_,
             ga_low.data(),ga_high.data(),
             rv.data(),
             strides.data());
@@ -188,19 +212,18 @@ std::vector<T> GATensor<rank,T>::get_values(const Cont_t1& low, const Cont_t2& h
 }
 
 template<size_t rank,typename T>
-void GATensor<rank,T>::fill(T value)const
+void GATensor<rank,T>::fill(T value)
 {
     GA_Fill(*handle_,&value);
+    scale_=1.0;
 }
 
 template<size_t rank,typename T>
 GATensor<rank,T> GATensor<rank,T>::operator+(const GATensor<rank,T>& rhs)const
 {
     GATensor C(dims_,0.0);
-    GA_Add(const_cast<T*>(&scale_),
-           !transposed_?*handle_:*(transpose_().handle_),
-           const_cast<T*>(&rhs.scale_),
-           !rhs.transposed_?*rhs.handle_:*rhs.transpose_().handle_,
+    GA_Add(const_cast<T*>(&scale_),*handle_,
+           const_cast<T*>(&rhs.scale_),*rhs.handle_,
            *C.handle_);
     return C;
 }
@@ -208,14 +231,8 @@ GATensor<rank,T> GATensor<rank,T>::operator+(const GATensor<rank,T>& rhs)const
 template<size_t rank,typename T>
 GATensor<rank,T>& GATensor<rank,T>::operator+=(const GATensor<rank,T>& rhs)
 {
-    if(transposed_)
-    {
-        *this=std::move(transpose_());
-        transposed_=false;
-    }
     GA_Add(const_cast<T*>(&scale_),*handle_,
-           const_cast<T*>(&rhs.scale_),
-           !rhs.transposed_?*rhs.handle_:*rhs.transpose_().handle_,
+           const_cast<T*>(&rhs.scale_),*rhs.handle_,
            *handle_);
     scale_=1.0;
     return *this;
@@ -226,10 +243,8 @@ GATensor<rank,T> GATensor<rank,T>::operator-(const GATensor<rank,T>& rhs)const
 {
     GATensor C(dims_,0.0);
     T temp=-1*rhs.scale_;
-    GA_Add(const_cast<T*>(&scale_),
-           !transposed_?*handle_:*transpose_().handle_,
-           const_cast<T*>(&temp),
-           !rhs.transposed_?*rhs.handle_:*rhs.transpose_().handle_,
+    GA_Add(const_cast<T*>(&scale_),*handle_,
+           const_cast<T*>(&temp),*rhs.handle_,
            *C.handle_);
     return C;
 }
@@ -238,21 +253,15 @@ template<size_t rank,typename T>
 GATensor<rank,T>& GATensor<rank,T>::operator-=(const GATensor<rank,T>& rhs)
 {
     T temp=-1*rhs.scale_;
-    if(transposed_)
-    {
-        *this=std::move(transpose_());
-        transposed_=false;
-    }
     GA_Add(const_cast<T*>(&scale_),*handle_,
-           const_cast<T*>(&temp),
-           !rhs.transposed_?*rhs.handle_:*rhs.transpose_().handle_,
+           const_cast<T*>(&temp),*rhs.handle_,
            *handle_);
     scale_=1.0;
     return *this;
 }
 
 template<size_t rank, typename T>
-GATensor<rank,T> GATensor<rank,T>::transpose_()const
+GATensor<rank,T> GATensor<rank,T>::transpose()const
 {
     GATensor rv(*this);
     GA_Transpose(*handle_,*rv.handle_);
@@ -266,10 +275,12 @@ void GATensor<rank,T>::print_out()const
 }
 
 template<size_t rank, typename T>
- typename std::enable_if<rank==2,GATensor<2, T>>::type  GATensor<rank,T>::operator*(const GATensor<2,T>& rhs)const
+typename std::enable_if<rank==2,GATensor<2, T>>::type
+GATensor<rank,T>::operator*(const GATensor<2,T>& rhs)const
 {
-    char ta=transposed_?'T':'N';
-    char tb=rhs.transposed_?'T':'N';
+    //TODO: modify when transpose is moved to a flag
+    char ta='N';
+    char tb='N';
     size_t m=dims()[ta=='N'?0:1];
     size_t n=rhs.dims()[tb=='T'?0:1];
     int k=(int)dims()[ta=='T'?0:1];
@@ -278,4 +289,29 @@ template<size_t rank, typename T>
     T zero=0;
     GA_Dgemm(ta,tb,(int)m,(int)n,k,scale,*handle_,*rhs.handle_,zero,*C.handle_);
     return C;
+}
+
+template<size_t rank,typename T>
+bool GATensor<rank,T>::operator==(const GATensor<rank,T>& rhs)const
+{
+    //TODO: Write a better one
+    if(dims_!=rhs.dims_)return false;
+    std::array<size_t,rank> idx{};
+    return detail_::equal_kernel(0,idx,dims_,*this,rhs);
+}
+
+template<size_t rank,typename T>
+typename GATensor<rank,T>::slice_range_t
+GATensor<rank,T>::my_slice()const
+{
+    std::array<int,rank> lo{},hi{};
+    int me=GA_Nodeid();
+    NGA_Distribution(*handle_,me,lo.data(),hi.data());
+    std::array<size_t,rank> low{},high{};
+    for(size_t i=0;i<rank;++i)
+    {
+        low[i]=lo[i];
+        high[i]=hi[i]+1;
+    }
+    return std::make_pair(low,high);
 }

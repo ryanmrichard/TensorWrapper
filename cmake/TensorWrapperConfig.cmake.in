@@ -34,11 +34,12 @@ message(STATUS "TensorWrapper includes: ${TensorWrapper_INCLUDE_DIR}")
 add_library(TensorWrapper INTERFACE)
 set(TensorWrapper_INCLUDE_DIRS ${TensorWrapper_INCLUDE_DIR}
                                ${EIGEN3_INCLUDE_DIRS}
-                               ${EXTERNAL_LIBRARIES}
+                               ${EXTERNAL_INCLUDE_DIRS}
 )
 set(TensorWrapper_LIBRARIES    ${TensorWrapper_LIBRARY}
                                ${EXTERNAL_LIBRARIES}
 )
+target_compile_definitions(TensorWrapper INTERFACE @EXTERNAL_DEFINES@)
 target_include_directories(TensorWrapper INTERFACE
                                                "${TensorWrapper_INCLUDE_DIRS}")
 target_link_libraries(TensorWrapper INTERFACE "${TensorWrapper_LIBRARIES}")
