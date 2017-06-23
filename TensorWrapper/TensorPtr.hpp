@@ -2,7 +2,7 @@
 #include <utility>
 #include <memory>
 #include "TensorWrapper/TensorImpl/TensorTypes.hpp"
-
+#include "TensorWrapper/TensorImpls.hpp"
 namespace TWrapper {
 namespace detail_ {
 
@@ -13,17 +13,10 @@ namespace detail_ {
  *  a dummy derived class which is templated on the data's type and actually
  *  stores the data.  From this class we can easily retrieve the data.  Note
  *  that this is fully type safe because you need to know the data's type to
- *  get it back.  If you're curious, and because this is perhaps a somewhat
- *  obscure fact, the little bit of template metaprogramming
- *  is because of the fact:
- *  \code{.cpp}
- *  template<typename T>
- *  void function(T&& value);
- *  \endcode
- *  Does not take an rvalue reference to an instance of type T, but rather
- *  takes a universal reference to an instance of type T.
+ *  get it back.
  *
  */
+template<size_t R, typename T>
 class TensorPtr{
 private:
     ///This class literally exists just to hold the next class
@@ -62,6 +55,15 @@ private:
     ///The actual instance is wrapped in this member
     std::unique_ptr<Placeholder> tensor_;
 
+    TensorTypes type_;
+
+    template<TensorTypes T1, TensorTypes T2>
+    auto caster()const{
+        using tensor_type=typename TensorWrapperImpl<R,T,T2>::type;
+        auto temp=static_cast<const Wrapper<tensor_type>*>(tensor_.get());
+        return TensorConverter<R,T,T1,T2>::convert(temp);
+    }
+
 
 public:
     ///Makes an empty TensorPtr instance
@@ -76,46 +78,86 @@ public:
      *  \tparam Tensor_t The type of the tensor we are copying.
      */
     template<typename Tensor_t>
-    explicit TensorPtr(const Tensor_t& tensor):
+    explicit TensorPtr(TensorTypes T1,const Tensor_t& tensor):
         tensor_(std::make_unique<Wrapper<
                 typename std::remove_reference<Tensor_t>::type>>(
-                    tensor))
+                    tensor)),
+        type_(T1)
     {}
 
 
     ///Same as above except for rvalues and non-const lvalues
     template<typename Tensor_t>
-    explicit TensorPtr(typename std::remove_reference<Tensor_t>::type && tensor):
+    explicit TensorPtr(TensorTypes T1,typename std::remove_reference<Tensor_t>::type && tensor):
         tensor_(std::make_unique<Wrapper<
                 typename std::remove_reference<Tensor_t>::type>>(
-                    std::forward<Tensor_t>(tensor)))
+                    std::forward<Tensor_t>(tensor))),
+        type_(T1)
     {}
 
     ///Deep copies another TensorPtr
     TensorPtr(const TensorPtr& other):
-      tensor_(std::move(other.tensor_->clone()))
+      tensor_(other.tensor_?
+              std::move(other.tensor_->clone()):nullptr),
+      type_(other.type_)
     {
     }
 
-    ///Takes ownership of other TensorPtr's tensor
-    TensorPtr(TensorPtr&& other):
-        tensor_(std::move(other.tensor_))
-    {}
+    /** \brief Assigns a deep copy of other to the current instance.
+     *
+     *  \param[in] other The instance to  deep copy.
+     *  \return The current instance now containing the data of other.
+     *  \throws std::bad_alloc if allocation fails.  Strong throw guarantee.
+     */
+    TensorPtr& operator=(const TensorPtr& other)
+    {
+        tensor_=std::move(TensorPtr(other).tensor_);
+        type_=other.type_;
+        return *this;
+    }
+
+    /** \brief Takes ownership of other TensorPtr's tensor
+     *
+     *  \param[in] other The tensor to take ownership of.
+     *  \throws No throw guarantee.
+     */
+    TensorPtr(TensorPtr&&)noexcept=default;
+
+    /** \brief Takes ownership of other TensorPtr's tensor
+     *
+     *  \param[in] other The tensor to take ownership of.
+     *  \throws No throw guarantee.
+     */
+    TensorPtr& operator=(TensorPtr&&)noexcept=default;
 
     ///Allows one to get the tensor back, assuming they know its type
-    template<typename Tensor_t>
-    Tensor_t& cast()
+    template<TensorTypes T1>
+    auto& cast()
     {
-        return const_cast<Tensor_t&>(
-            const_cast<const TensorPtr&>(*this).cast<Tensor_t>()
+        using tensor_type=typename TensorWrapperImpl<R,T,T1>::type;
+
+        return const_cast<tensor_type&>(
+            const_cast<const TensorPtr&>(*this).cast<T1>()
         );
     }
 
     ///Allows one to get a read-only version of the tensor
-    template<typename Tensor_t>
-    const Tensor_t& cast()const
+    template<TensorTypes T1>
+    const auto& cast()const
     {
-        return static_cast<const Wrapper<Tensor_t>*>(tensor_.get())->tensor;
+        using tensor_type=typename TensorWrapperImpl<R,T,T1>::type;
+        if(type_==T1)//Was the type in here already
+            return static_cast<const Wrapper<tensor_type>*>(
+                        tensor_.get())->tensor;
+//        //Need to cast
+//        if(type_==TensorTypes::EigenMatrix)
+//            return caster<T1,TensorTypes::EigenMatrix>();
+//        if(type_==TensorTypes::EigenTensor)
+//            return caster<T1,TensorTypes::EigenTensor>();
+//        if(type_==TensorTypes::GlobalArrays)
+//            return caster<T1,TensorTypes::GlobalArrays>();
+        throw std::logic_error("I don't know what crazy tensor you're trying to"
+                               " get, but I don't know how to make it.");
     }
 
     /** \brief Implicit conversion to boolean representing whether or not this

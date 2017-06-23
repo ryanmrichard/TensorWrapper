@@ -1,12 +1,15 @@
 #pragma once
 #include <array>
+#include "TensorWrapper/Shape.hpp"
+#include "TensorWrapper/Contraction.hpp"
+#include "TensorWrapper/MemoryBlock.hpp"
 
 namespace TWrapper {
 namespace detail_ {
 
 /** \brief A class that's always false
  *
- *  Apparently, do to some quirk of the C++ language you can't do
+ *  Apparently, due to some quirk of the C++ language you can't do
  *
  *  static_assert(false,message here);
  *

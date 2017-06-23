@@ -1,83 +1,84 @@
-//This file not meant for inclusion outside TensorWrapper.hpp
+////This file not meant for inclusion outside TensorWrapper.hpp
 
-/** \brief A macro for generating the code for our operator overloading.
- *
- *  For each operator we need several scenarios:
- *
- *  1. TensorWrapper::operator(RHS_t)
- *  2. TensorWrapper::operator(TensorWrapper)
- *  3. TensorWrapper::operator(TensorWrapper')
- *  4. LHS_t::operator(TensorWrapper)
- *
- *  Where LHS_t/RHS_t are any class recognized by the backend (or fundamental
- *  type of the C++ language) and TensorWrapper' is another TensorWrapper
- *  instance.  At least for the moment, each symbol that is overloaded really
- *  only makes sense if the tensors have the same rank.  Although, I've
- *  written the list as if these operators were class members we actually just
- *  overload the free functions in an effort to keep the class cleaner.
- *
- *  \param[in] rv  The return value of the operator (can be auto)
- *  \param[in] sym The operator's symbol (+,-, etc.)
- *  \param[in] name The function to call in TensorWrapperImpl
- *
- */
-#define TWOPERATOR(rv,sym,name)\
-    template<size_t rank, typename T,\
-             TWrapper::detail_::TensorTypes T1,typename RHS_t>\
-    rv operator sym(const TWrapper::TensorWrapper<rank,T,T1>& lhs,\
-                             const RHS_t& other)\
-    {\
-        TWrapper::detail_::TensorWrapperImpl<rank,T,T1> impl;\
-        return name(lhs.tensor(),other);\
-    }\
-    template<size_t rank, typename T,TWrapper::detail_::TensorTypes T1>\
-    rv\
-    operator sym(const TWrapper::TensorWrapper<rank,T,T1>& lhs,\
-                 const TWrapper::TensorWrapper<rank,T,T1>& other)\
-    {\
-        TWrapper::detail_::TensorWrapperImpl<rank,T,T1> impl;\
-        return name(lhs.tensor(),other.tensor());\
-    }\
-    template<size_t rank, typename T, TWrapper::detail_::TensorTypes T1,\
-             TWrapper::detail_::TensorTypes T2>\
-    rv\
-    operator sym(const TWrapper::TensorWrapper<rank,T,T1>& lhs,\
-                 const TWrapper::TensorWrapper<rank,T,T2>& other)\
-    {\
-        TWrapper::detail_::TensorWrapperImpl<rank,T,T1> impl;\
-        return name(lhs.tensor(),\
-            TWrapper::detail_::TensorConverter<rank,T,T1,T2>::convert(\
-                other.tensor()));\
-    }\
-    template<typename LHS_t,size_t rank, typename T, TWrapper::detail_::TensorTypes T1>\
-    rv\
-    operator sym(const LHS_t& lhs,\
-                 const TWrapper::TensorWrapper<rank,T,T1>& rhs)\
-    {\
-        TWrapper::detail_::TensorWrapperImpl<rank,T,T1> impl;\
-        return name(lhs,rhs.tensor());\
-    }
-
-TWOPERATOR(auto,+,impl.add)
-TWOPERATOR(auto,-,impl.subtract)
-TWOPERATOR(bool,==,impl.are_equal)
-TWOPERATOR(bool,!=,!impl.are_equal)
-#undef TWOPERATOR
-
-//Some operators we miss with the above macro
-
-///Left multipy by a T
-template<size_t rank, typename T, TWrapper::detail_::TensorTypes T1>
-decltype(auto)
-operator*(T lhs,const TWrapper::TensorWrapper<rank,T,T1>& rhs)
+//Although these are all very similar, they seem to differ enough to not make
+//a macro worth it
+template<size_t R,typename T>
+auto operator+(TWrapper::TensorWrapperBase<R,T>& lhs,
+               TWrapper::TensorWrapperBase<R,T>& rhs)
 {
-    return rhs*lhs;
+    using namespace TWrapper::detail_;
+
+    auto result=make_op<AddOp<R,T>>(make_op<DeRef<R,T>>(lhs.tensor()),
+                                    make_op<DeRef<R,T>>(rhs.tensor()));
+    auto actual=result.template eval<TensorTypes::EigenMatrix>();
+    auto emat=actual.eval();
+    return emat;
 }
 
-///Right multipy by a T
+template<size_t R,typename T,typename LHS_t,
+    typename TWrapper::detail_::EnableIfNotATWrapper<R,T,LHS_t>::type=0>
+auto operator+(LHS_t&& lhs,const TWrapper::TensorWrapperBase<R,T>& rhs)
+{
+    using namespace TWrapper::detail_;
+    return make_op<AddOp<R,T>>(std::forward<LHS_t>(lhs),
+                               make_op<DeRef<R,T>>(rhs.tensor()));
+}
+
+template<size_t R, typename T, typename RHS_t,
+    typename TWrapper::detail_::EnableIfNotATWrapper<R,T,RHS_t>::type=0>
+auto operator+(const TWrapper::TensorWrapperBase<R,T>& lhs,RHS_t&& rhs)
+{
+    using namespace TWrapper::detail_;
+    return make_op<AddOp<R,T>>(make_op<DeRef<R,T>>(lhs.tensor()),
+                               std::forward<RHS_t>(rhs));
+}
+
+template<size_t R,typename T>
+bool operator==(const TWrapper::TensorWrapperBase<R,T>& lhs,
+                const TWrapper::TensorWrapperBase<R,T>& rhs)
+{
+    using namespace TWrapper::detail_;
+    auto op=make_op<EqualOp<R,T>>(make_op<DeRef<R,T>>(lhs.tensor()),
+                                make_op<DeRef<R,T>>(rhs.tensor()));
+    return eval_op(lhs.type(),op);
+}
+
+template<size_t R,typename T,typename LHS_t,
+    typename TWrapper::detail_::EnableIfNotATWrapper<R,T,LHS_t>::type=0>
+bool operator==(LHS_t&& lhs,const TWrapper::TensorWrapperBase<R,T>& rhs)
+{
+    using namespace TWrapper::detail_;
+    auto op=make_op<EqualOp<R,T>>(std::forward<LHS_t>(lhs),
+                                  make_op<DeRef<R,T>>(rhs.tensor()));
+    return eval_op(rhs.type(),op);
+}
+
+template<size_t R, typename T, typename RHS_t,
+    typename TWrapper::detail_::EnableIfNotATWrapper<R,T,RHS_t>::type=0>
+bool operator==(const TWrapper::TensorWrapperBase<R,T>& lhs,RHS_t&& rhs)
+{
+    using namespace TWrapper::detail_;
+    auto op=make_op<EqualOp<R,T>>(make_op<DeRef<R,T>>(lhs.tensor()),
+                                  std::forward<RHS_t>(rhs));
+    return eval_op(lhs.type(),op);
+}
+
+#undef TWRAPPER_OPER
+
+////Some operators we miss with the above macro
+
+/////Left multipy by a T
 //template<size_t rank, typename T, TWrapper::detail_::TensorTypes T1>
 //decltype(auto)
 //operator*(T lhs,const TWrapper::TensorWrapper<rank,T,T1>& rhs)
 //{
 //    return rhs*lhs;
 //}
+
+/////Right multipy by a T
+////template<size_t rank, typename T, TWrapper::detail_::TensorTypes T1>
+////decltype(auto)
+////operator*(T lhs,const TWrapper::TensorWrapper<rank,T,T1>& rhs)
+////{
+////    return rhs*lhs;
+////}

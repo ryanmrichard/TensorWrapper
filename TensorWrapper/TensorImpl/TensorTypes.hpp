@@ -5,7 +5,8 @@ namespace detail_{
     ///Enumerations of the tensors
     enum class TensorTypes {EigenMatrix,
                             EigenTensor,
-                            GlobalArrays};
+                            GlobalArrays
+                           };
 
 
 /** \brief Defines a conversiont from RHS_t->LHS_t, the two sides are assumed to

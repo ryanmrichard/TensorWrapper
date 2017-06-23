@@ -4,34 +4,106 @@
 #include "TensorWrapper/MemoryBlock.hpp"
 #include "TensorWrapper/TensorPtr.hpp"
 #include "TensorWrapper/TensorImpl/TensorTypes.hpp"
+#include "TensorWrapper/Operation.hpp"
 #include "TensorWrapper/OperationImpls.hpp"
-#include "TensorWrapper/Downcast.hpp"
 
 namespace TWrapper {
-
+/** \brief  The class that actually does tensor-y stuff.
+ *
+ *  \tparam R The rank of the tensor
+ *  \tparam T The type of the scalars in the tensor.
+ */
 template<size_t R,typename T>
 class TensorWrapperBase{
 protected:
     ///A type erased tensor
-    detail_::TensorPtr tensor_;
+    detail_::TensorPtr<R,T> tensor_;
 
     ///That tensor's type
     detail_::TensorTypes ttype_;
 
-    ///Constructor used by derived classes with a tensor
-    TensorWrapperBase(detail_::TensorPtr& tensor,
-                      detail_::TensorTypes ttype):
-        tensor_(tensor),
+    /** \brief Constructor used by derived classes after wrapping a tensor.
+     *
+     *
+     *   \param[in] tensor The wrapped tensor we now own.  Memory allocation
+     *                     etc. occurred in instantiating \p tensor.
+     *   \param[in] ttype  The enumeration corresponding to the backend to
+     *                     use for this tensor.
+     *
+     *   \throws No throw guarantee.
+     */
+    TensorWrapperBase(detail_::TensorPtr<R,T>&& tensor,
+                      detail_::TensorTypes ttype)noexcept:
+        tensor_(std::move(tensor)),
         ttype_(ttype)
     {}
 
-    ///Constructor used by derived class's default ctor
+    /** \brief The constructor for when the tensor isn't ready yet.
+     *
+     *  Unlike the other protected constructor this constructor assumes
+     *  the derived class will be building
+     *
+     */
     TensorWrapperBase(detail_::TensorTypes ttype):
         ttype_(ttype)
     {}
 
 public:
+
+    detail_::TensorPtr<R,T>& tensor(){return tensor_;}
+    const detail_::TensorPtr<R,T>& tensor()const{return tensor_;}
+    detail_::TensorTypes type()const{return ttype_;}
+
+    ///The type of a "rank"-dimensional vector of indices
     using index_t=std::array<size_t,R>;
+
+    /** \brief Constructs a null tensor instance
+     *
+     *  The resulting instance is essentially a placeholder and can only be made
+     *  usable by assigning or moving a legit instance into it.
+     *
+     *  \throws Never throws.
+     */
+    TensorWrapperBase()noexcept=default;
+
+    /** \brief Constructs a new instance via a deep copy of \p other
+     *
+     *  \note This constructor relies on the derived classes having no state
+     *        because it slices (in the C++ sense of the word) the class.
+     *
+     *  \param[in] other The tensor to deep copy.
+     *
+     *  \throws std::bad_alloc if there is insufficient memory for the copy.
+     *          Strong throw guarantee.
+     *
+     */
+    TensorWrapperBase(const TensorWrapperBase&)=default;
+
+    /** \brief Assigns a deep copy of \p other to the current instance.
+     *
+     *  \param[in] other The tensor to deep copy.
+     *  \return The current instance containing a deep copy of other.
+     *  \throws std::bad_alloc if the allocation fails.  Strong throw guarantee.
+     */
+    TensorWrapperBase& operator=(const TensorWrapperBase&)=default;
+
+    /** \brief Takes ownership of another TensorWrapper.
+     *
+     *  \param[in] other The instance we are taking over.
+     *
+     *  \throw No throw guarantee.
+     */
+    TensorWrapperBase(TensorWrapperBase&&)noexcept=default;
+
+    /** \brief Takes ownership of another TensorWrapper freeing up current
+     *         resources.
+     *
+     *  \param[in] other The tensor to take ownership of.
+     *  \returns The current instance, now with the contents of other.
+     *  \throws No throw guarantee.
+     */
+    TensorWrapperBase& operator=(TensorWrapperBase&&)noexcept=default;
+
 
     virtual ~TensorWrapperBase(){}
 
@@ -42,7 +114,10 @@ public:
     ///Returns the shape of the wrapped tensor
     Shape<R> shape()const
     {
-        return detail_::unary_downcast(tensor_,ttype_,detail_::DimsOp<R>());
+        auto op= detail_::make_op<detail_::DimsOp<R,T>>(
+                    detail_::make_op<detail_::DeRef<R,T>>(tensor_));
+
+        return detail_::eval_op(ttype_,op);
     }
     ///@}
 
@@ -91,34 +166,26 @@ public:
     TensorWrapperBase<R,T> slice(const index_t& start,
                                  const index_t& end)const
     {
-        return detail_::unary_downcast(tensor_,ttype_,
-                   detail_::SliceOp<R,T>(),start,end);
+//        return detail_::downcast(tensor_,ttype_,
+//                   detail_::SliceOp<R,T>(),start,end);
     }
     MemoryBlock<R,const T> get_memory()const
     {
-        return detail_::unary_downcast(tensor_,ttype_,
-                   detail_::GetMemoryOp<R,const T>());
+//        return detail_::downcast(tensor_,ttype_,
+//                   detail_::GetMemoryOp<R,const T>());
     }
 
     MemoryBlock<R,T> get_memory()
     {
-        return detail_::unary_downcast(tensor_,ttype_,
-                                       detail_::GetMemoryOp<R,T>());
+//        return detail_::downcast(tensor_,ttype_,
+//                                       detail_::GetMemoryOp<R,T>());
     }
 
     void set_slice(const MemoryBlock<R,T>& other)
     {
-        detail_::unary_downcast(tensor_,ttype_,
-                                detail_::SetMemoryOp<R,T>(),other);
+//        detail_::downcast(tensor_,ttype_,
+//                                detail_::SetMemoryOp<R,T>(),other);
     }
-
-    template<typename RHS_t>
-    auto operator+(const RHS_t& rhs)const
-    {
-        return detail_::unary_downcast(tensor_,ttype_,
-                                       detail_::AddOp<R,T>(),rhs);
-    }
-
 
 //    ///API for contraction
 //    template<size_t N> constexpr

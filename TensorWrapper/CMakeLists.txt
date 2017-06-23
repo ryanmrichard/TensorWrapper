@@ -33,9 +33,10 @@ include_directories(${EXTERNAL_INCLUDE_DIRS})
 my_add_subdirectory(TensorImpl)
 
 # Whether we have source to compile or not depends on what features are enabled
-if(NOT TensorImpl_SRC STREQUAL "")
+if(TensorImpl_SRC)
     #This is kindof a hack...
     enable_language(Fortran)
+    message(STATUS "Building an actual library.${TensorImpl_SRC}.")
     list(APPEND FORTRAN_LIBS ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
     foreach(lib ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
         find_library (${lib}_PATH lib${lib}.so ${CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES})
@@ -43,14 +44,16 @@ if(NOT TensorImpl_SRC STREQUAL "")
     endforeach()
     add_library(TensorWrapper ${TensorImpl_SRC})
     target_link_libraries(TensorWrapper PUBLIC ${Fortran_EXTERNAL_LIBRARIES})
+    target_compile_definitions(TensorWrapper PUBLIC ${EXTERNAL_DEFINES})
 else()
     add_library(TensorWrapper INTERFACE)
+    target_link_libraries(TensorWrapper INTERFACE ${EXTERNAL_LIBRARIES})
+    target_include_directories(TensorWrapper INTERFACE ${TWRAPPER_ROOT}
+                                                    ${EXTERNAL_INCLUDE_DIRS}
+    )
 endif()
-target_compile_definitions(TensorWrapper PUBLIC ${EXTERNAL_DEFINES})
-target_link_libraries(TensorWrapper PUBLIC ${EXTERNAL_LIBRARIES})
-target_include_directories(TensorWrapper PUBLIC ${TWRAPPER_ROOT}
-                                                ${EXTERNAL_INCLUDE_DIRS}
-)
+
+
 
 install(TARGETS TensorWrapper
         LIBRARY DESTINATION lib/
