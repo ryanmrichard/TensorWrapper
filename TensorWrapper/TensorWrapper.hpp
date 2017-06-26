@@ -38,7 +38,7 @@ public:
     {
         auto result=op.template eval<T1>();
         typename Impl_t::type temp_tensor=result.eval();
-        base_type::tensor_=tensor_ptr(T1,std::move(temp_tensor));
+        base_type::tensor_=std::move(tensor_ptr(T1,std::move(temp_tensor)));
     }
 
     /** \brief The constructor used for wrapping the native classes of a tensor
@@ -73,7 +73,8 @@ public:
     TensorWrapper& operator=(const detail_::Operation<Args...>& op)
     {
         auto result=op.template eval<T1>();
-        base_type::tensor_=detail_::TensorPtr<Rank,T>(T1,result);
+        base_type::tensor_=std::move(detail_::TensorPtr<Rank,T>(T1,result));
+        return *this;
     }
 
 
@@ -85,7 +86,10 @@ public:
     TensorWrapper(const std::array<size_t,Rank>& dims):
         base_type(T1)
     {
-        base_type::tensor_=detail_::TensorPtr<Rank,T>(T1,impl_.allocate(dims));
+        base_type::tensor_=
+                std::move(detail_::TensorPtr<Rank,T>(T1,
+                            std::move(impl_.allocate(dims))
+                ));
     }
 
     TensorWrapper(my_type&&)=default;

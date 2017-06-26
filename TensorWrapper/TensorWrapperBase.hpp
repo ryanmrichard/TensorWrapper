@@ -48,10 +48,25 @@ protected:
         ttype_(ttype)
     {}
 
+
+
 public:
 
-    detail_::TensorPtr<R,T>& tensor(){return tensor_;}
-    const detail_::TensorPtr<R,T>& tensor()const{return tensor_;}
+    /** \brief Sets up an operation that can derefence the TensorPtr
+     *
+     *  This function is largely intended as an implementation detail, but
+     *  I wanted to avoid declaring lots of operators as friends of this
+     *  class.
+     *
+     * \return An operation that when evaluated will return the actual
+     *  tensor by reference.
+     */
+    auto de_ref()const->
+        decltype(detail_::make_op<detail_::DeRef<R,T>>(tensor_))
+    {
+        return  detail_::make_op<detail_::DeRef<R,T>>(tensor_);
+    }
+
     detail_::TensorTypes type()const{return ttype_;}
 
     ///The type of a "rank"-dimensional vector of indices
@@ -114,9 +129,7 @@ public:
     ///Returns the shape of the wrapped tensor
     Shape<R> shape()const
     {
-        auto op= detail_::make_op<detail_::DimsOp<R,T>>(
-                    detail_::make_op<detail_::DeRef<R,T>>(tensor_));
-
+        auto op= detail_::make_op<detail_::DimsOp<R,T>>(de_ref());
         return detail_::eval_op(ttype_,op);
     }
     ///@}

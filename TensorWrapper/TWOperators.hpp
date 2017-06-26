@@ -3,16 +3,11 @@
 //Although these are all very similar, they seem to differ enough to not make
 //a macro worth it
 template<size_t R,typename T>
-auto operator+(TWrapper::TensorWrapperBase<R,T>& lhs,
-               TWrapper::TensorWrapperBase<R,T>& rhs)
+auto operator+(const TWrapper::TensorWrapperBase<R,T>& lhs,
+               const TWrapper::TensorWrapperBase<R,T>& rhs)
 {
     using namespace TWrapper::detail_;
-
-    auto result=make_op<AddOp<R,T>>(make_op<DeRef<R,T>>(lhs.tensor()),
-                                    make_op<DeRef<R,T>>(rhs.tensor()));
-    auto actual=result.template eval<TensorTypes::EigenMatrix>();
-    auto emat=actual.eval();
-    return emat;
+    return make_op<AddOp<R,T>>(lhs.de_ref(),rhs.de_ref());
 }
 
 template<size_t R,typename T,typename LHS_t,
@@ -20,8 +15,7 @@ template<size_t R,typename T,typename LHS_t,
 auto operator+(LHS_t&& lhs,const TWrapper::TensorWrapperBase<R,T>& rhs)
 {
     using namespace TWrapper::detail_;
-    return make_op<AddOp<R,T>>(std::forward<LHS_t>(lhs),
-                               make_op<DeRef<R,T>>(rhs.tensor()));
+    return make_op<AddOp<R,T>>(std::forward<LHS_t>(lhs),rhs.de_ref());
 }
 
 template<size_t R, typename T, typename RHS_t,
@@ -29,8 +23,7 @@ template<size_t R, typename T, typename RHS_t,
 auto operator+(const TWrapper::TensorWrapperBase<R,T>& lhs,RHS_t&& rhs)
 {
     using namespace TWrapper::detail_;
-    return make_op<AddOp<R,T>>(make_op<DeRef<R,T>>(lhs.tensor()),
-                               std::forward<RHS_t>(rhs));
+    return make_op<AddOp<R,T>>(lhs.de_ref(),std::forward<RHS_t>(rhs));
 }
 
 template<size_t R,typename T>
@@ -38,8 +31,7 @@ bool operator==(const TWrapper::TensorWrapperBase<R,T>& lhs,
                 const TWrapper::TensorWrapperBase<R,T>& rhs)
 {
     using namespace TWrapper::detail_;
-    auto op=make_op<EqualOp<R,T>>(make_op<DeRef<R,T>>(lhs.tensor()),
-                                make_op<DeRef<R,T>>(rhs.tensor()));
+    auto op=make_op<EqualOp<R,T>>(lhs.de_ref(),rhs.de_ref());
     return eval_op(lhs.type(),op);
 }
 
@@ -48,8 +40,7 @@ template<size_t R,typename T,typename LHS_t,
 bool operator==(LHS_t&& lhs,const TWrapper::TensorWrapperBase<R,T>& rhs)
 {
     using namespace TWrapper::detail_;
-    auto op=make_op<EqualOp<R,T>>(std::forward<LHS_t>(lhs),
-                                  make_op<DeRef<R,T>>(rhs.tensor()));
+    auto op=make_op<EqualOp<R,T>>(std::forward<LHS_t>(lhs),rhs.de_ref());
     return eval_op(rhs.type(),op);
 }
 
@@ -58,12 +49,22 @@ template<size_t R, typename T, typename RHS_t,
 bool operator==(const TWrapper::TensorWrapperBase<R,T>& lhs,RHS_t&& rhs)
 {
     using namespace TWrapper::detail_;
-    auto op=make_op<EqualOp<R,T>>(make_op<DeRef<R,T>>(lhs.tensor()),
-                                  std::forward<RHS_t>(rhs));
+    auto op=make_op<EqualOp<R,T>>(lhs.de_ref(),std::forward<RHS_t>(rhs));
     return eval_op(lhs.type(),op);
 }
 
-#undef TWRAPPER_OPER
+template<size_t R, typename T>
+auto operator*(const TWrapper::TensorWrapperBase<R,T>& lhs,T rhs)
+{
+    using namespace TWrapper::detail_;
+    return make_op<ScaleOp<R,T>>(lhs.de_ref(),rhs);
+}
+
+template<size_t R, typename T>
+auto operator*(T lhs, const TWrapper::TensorWrapperBase<R,T>& rhs)
+{
+    return rhs*lhs;
+}
 
 ////Some operators we miss with the above macro
 

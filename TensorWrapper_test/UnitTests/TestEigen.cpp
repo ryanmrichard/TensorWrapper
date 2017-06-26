@@ -1,34 +1,61 @@
 #include <TensorWrapper/TensorWrapper.hpp>
+#include <TensorWrapper/Operation.hpp>
+#include<TensorWrapper/TensorImpl/TensorTypes.hpp>
 #include <iostream>
 #include "TestHelpers.hpp"
 
-//using namespace TWrapper;
-//template<size_t rank>
-//using tensor_type=TensorWrapper<rank,double,detail_::TensorTypes::EigenMatrix>;
-//using matrix_type=tensor_type<2>::wrapped_t;
-//using vector_type=tensor_type<1>::wrapped_t;
+using namespace TWrapper;
+using tensor_type=EigenMatrix<double>;
+using matrix_type=Eigen::MatrixXd;
+using vector_type=Eigen::VectorXd;
 
 int main()
 {
     Tester tester("Testing Eigen Matrix Wrapping");
-//    const size_t dim=10;
-//    matrix_type A=matrix_type::Random(dim,dim),
-//                 B=matrix_type::Random(dim,dim),
-//                 C=matrix_type::Random(dim,dim);
-//    Shape<2> corr_shape({10,10},false);
+    const size_t dim=10;
+    const std::array<size_t,2> shape({10,10});
+    matrix_type A=matrix_type::Random(dim,dim),
+                B=matrix_type::Random(dim,dim),
+                C=matrix_type::Random(dim,dim);
+    Shape<2> corr_shape(shape,false);
 
-//    //Make sure a default constructed instance is available
-//    tensor_type<2> Default;
-//    tester.test("Default Dimensions",Default.dims()==Shape<2>({0,0},false));
-//    Default=tensor_type<2>(std::array<size_t,2>{dim,dim});
+    //Basic Constructors
+    tensor_type defaulted;
+    tester.test("Default rank",defaulted.rank()==2);
+    tensor_type allocated(shape);
+    tester.test("Allocate rank",allocated.rank()==2);
+    tester.test("Allocate dimensions",allocated.shape()==corr_shape);
+    tensor_type moved(std::move(allocated));
+    tester.test("Moved rank",moved.rank()==2);
+    tester.test("Moved dimensions",moved.shape()==corr_shape);
 
-//    //Ensure construction from Eigen Matrix
-//    tensor_type<2> _A(A),_B(B),_C(C);
+    //Basic Assignment
+    allocated=moved;
+    tester.test("Assignment rank",allocated.rank()==2);
+    tester.test("Assignment dimensions",allocated.shape()==corr_shape);
+    defaulted=std::move(moved);
+    tester.test("Move allocate rank",defaulted.rank()==2);
+    tester.test("Allocate dimensions",defaulted.shape()==corr_shape);
 
-//    //Addition
-//    matrix_type D=A+B+C;
-//    tensor_type<2> _D=_A+_B+_C;
-//    tester.test("Addition",_D==D);
+
+    //Construction from Eigen Matrix
+    tensor_type _A(A),_B(B),_C(C);
+    tester.test("Rank",_A.rank()==2);
+    tester.test("Dimensions",_A.shape()==corr_shape);
+    tester.test("Values",_A==A);
+
+    matrix_type D=A+B+C;
+    tensor_type _D=_A+_B+_C;
+    tester.test("Addition",_D==D);
+
+    matrix_type E=0.5*D;
+    tensor_type _E=0.5*_D;
+    tester.test("Left scale",_E==E);
+
+    matrix_type F=D*0.5;
+    tensor_type _F=_D*0.5;
+    tester.test("Right scale",_F==F);
+
 
 //    //Test memory read/write
 //    {
@@ -52,13 +79,7 @@ int main()
 //    tensor_type<2> _E=_A-_B-_C;
 //    tester.test("Subtraction",_E==E);
 
-//    matrix_type F=0.5*E;
-//    tensor_type<2> _F=0.5*_E;
-//    tester.test("Left scale",_F==F);
 
-//    matrix_type G=E*0.5;
-//    tensor_type<2> _G=_E*0.5;
-//    tester.test("Right scale",_G==G);
 
 //    matrix_type H=G*E;
 //    tensor_type<2> _H=_G("i,j")*_E("j,k");

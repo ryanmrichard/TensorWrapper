@@ -33,22 +33,22 @@ private:
     {
       ///Copies tensor \p t into this instance
       explicit Wrapper(const Tensor_t& t):
-            tensor(t)
+            tensor(std::make_unique<Tensor_t>(t))
       {}
 
       ///Moves tensor \p t into this instance
       explicit Wrapper(Tensor_t&& t):
-          tensor(std::forward<Tensor_t>(t))
+          tensor(std::make_unique<Tensor_t>(std::move(t)))
       {}
 
       ///Returns a deep copy of tensor, avoiding slicing
       std::unique_ptr<Placeholder> clone()const override
       {
-          return std::make_unique<Wrapper<Tensor_t>>(tensor);
+          return std::make_unique<Wrapper<Tensor_t>>(*tensor);
       }
 
       ///The instance in the pointer
-      Tensor_t tensor;
+      std::unique_ptr<Tensor_t> tensor;
 
      };
 
@@ -56,6 +56,22 @@ private:
     std::unique_ptr<Placeholder> tensor_;
 
     TensorTypes type_;
+
+
+    template<typename Tensor_t>
+    const Wrapper<Tensor_t>* downcast()const{
+        auto rv=dynamic_cast<const Wrapper<Tensor_t>*>(tensor_.get());
+        if(!rv)
+            throw std::bad_cast();
+        return rv;
+    }
+
+    template<typename Tensor_t>
+    Wrapper<Tensor_t>* downcast()
+    {
+        return const_cast<Wrapper<Tensor_t>*>(
+                    const_cast<const TensorPtr<R,T>*>(*this)->downcast());
+    }
 
     template<TensorTypes T1, TensorTypes T2>
     auto caster()const{
@@ -69,7 +85,9 @@ public:
     ///Makes an empty TensorPtr instance
     TensorPtr()=default;
 
-    /** \brief Makes a TensorPtr by copying a tensor instance.
+    ~TensorPtr()=default;
+
+    /** \brief Makes a TensorPtr from a backend's instance.
      *
      *  Whether this is a deep or shallow copy of \p tensor is up to the
      *  tensor library backend.
@@ -78,20 +96,10 @@ public:
      *  \tparam Tensor_t The type of the tensor we are copying.
      */
     template<typename Tensor_t>
-    explicit TensorPtr(TensorTypes T1,const Tensor_t& tensor):
-        tensor_(std::make_unique<Wrapper<
-                typename std::remove_reference<Tensor_t>::type>>(
-                    tensor)),
-        type_(T1)
-    {}
-
-
-    ///Same as above except for rvalues and non-const lvalues
-    template<typename Tensor_t>
-    explicit TensorPtr(TensorTypes T1,typename std::remove_reference<Tensor_t>::type && tensor):
-        tensor_(std::make_unique<Wrapper<
-                typename std::remove_reference<Tensor_t>::type>>(
-                    std::forward<Tensor_t>(tensor))),
+    explicit TensorPtr(TensorTypes T1,Tensor_t&& tensor):
+        tensor_(std::make_unique<
+                    Wrapper<typename std::remove_reference<Tensor_t>::type>
+                >(std::forward<Tensor_t>(tensor))),
         type_(T1)
     {}
 
@@ -147,8 +155,12 @@ public:
     {
         using tensor_type=typename TensorWrapperImpl<R,T,T1>::type;
         if(type_==T1)//Was the type in here already
-            return static_cast<const Wrapper<tensor_type>*>(
-                        tensor_.get())->tensor;
+        {
+            //TODO: change to static cast when I know this works
+            auto tensordown=downcast<tensor_type>();
+            auto rv=tensordown->tensor.get();
+            return *rv;
+        }
 //        //Need to cast
 //        if(type_==TensorTypes::EigenMatrix)
 //            return caster<T1,TensorTypes::EigenMatrix>();

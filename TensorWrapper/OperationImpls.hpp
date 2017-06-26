@@ -1,11 +1,22 @@
 #pragma once
+#include "TensorWrapper/TensorImpl/TensorTypes.hpp"
+#include "TensorWrapper/TensorImpl/TensorWrapperImpl.hpp"
+#include "TensorWrapper/Shape.hpp"
+#include "TensorWrapper/TensorPtr.hpp"
 
 namespace TWrapper{
-template<size_t R,typename T>
-class TensorWrapperBase;
-
 namespace detail_{
 
+/** \brief An operation that dereferences a TensorPtr instance into the base
+ *  form of a given backend.
+ *
+ *  \tparam R The rank of the resulting tensor
+ *  \tparam T The type of the scalar elements inside the tensor.
+ *
+ *
+ *  \throws std::bad_cast if the tensor is not convertible to the requested
+ *           type.
+ */
 template<size_t R, typename T>
 struct DeRef{
     template<TensorTypes T1,typename Tensor_t>
@@ -15,7 +26,22 @@ struct DeRef{
     }
 };
 
-///Returns the shape of a tensor
+template<size_t R, typename T>
+struct EraseType{
+    template<TensorTypes T1, typename Tensor_t>
+    TensorPtr<R,T> eval(Tensor_t&& tensor)const
+    {
+        return TensorPtr<R,T>(T1,std::forward<Tensor_t>(tensor));
+    }
+};
+
+
+/** \brief Returns the shape of a tensor
+ *
+ *
+ * \tparam R The rank of the tensor
+ * \tparam T The scalar's type.
+ */
 template<size_t R,typename T>
 struct DimsOp{
     template<TensorTypes T1, typename Tensor_t>
@@ -31,11 +57,8 @@ struct AddOp{
     auto eval(LHS_t&& lhs,RHS_t&& rhs)
     {
         TensorWrapperImpl<R,T,T1> impl;
-        using return_t=decltype(impl.add(
-            std::forward<LHS_t>(lhs),std::forward<RHS_t>(rhs)));
-        return std::forward<return_t>(
-                    impl.add(std::forward<LHS_t>(lhs),
-                             std::forward<RHS_t>(rhs)));
+        return impl.add(std::forward<LHS_t>(lhs),
+                        std::forward<RHS_t>(rhs));
     }
 };
 
@@ -47,6 +70,16 @@ struct EqualOp{
         TensorWrapperImpl<R,T,T1> impl;
         return impl.are_equal(std::forward<LHS_t>(lhs),
                               std::forward<RHS_t>(rhs));
+    }
+};
+
+template<size_t R,typename T>
+struct ScaleOp{
+    template <TensorTypes T1, typename Tensor_t>
+    auto eval(Tensor_t&& lhs,T scale)
+    {
+        TensorWrapperImpl<R,T,T1> impl;
+        return impl.scale(std::forward<Tensor_t>(lhs),scale);
     }
 };
 
@@ -99,16 +132,7 @@ struct EqualOp{
 
 
 
-//template<size_t R,typename T>
-//struct ScaleOp{
-//    template <typename Impl,typename tensor_t>
-//    auto eval(const Impl& impl,
-//              tensor_t&& lhs,
-//              T scale)
-//    {
-//        return impl.scale(std::forward<tensor_t>(lhs),scale);
-//    }
-//};
+
 
 //template<size_t R,typename T>
 //struct SubtractOp{

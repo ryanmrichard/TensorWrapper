@@ -155,20 +155,20 @@ struct TensorWrapperImpl<1,T,TensorTypes::EigenMatrix> {
 
     ///Returns true if two tensors are equal
     template<typename LHS_t, typename RHS_t>
-    bool are_equal(const LHS_t& lhs, const RHS_t& rhs)const
+    bool are_equal(LHS_t&& lhs, RHS_t&& rhs)const
     {
         return lhs == rhs;
     }
 
     template<typename Tensor_t>
-    auto scale(const Tensor_t& lhs,double val)const
+    auto scale(Tensor_t&& lhs,double val)const
     {
         return lhs*val;
     }
 
     ///Adds to the tensor
     template<typename LHS_t,typename RHS_t>
-    auto add(const LHS_t& lhs,const RHS_t&rhs)const
+    auto add(LHS_t&& lhs,RHS_t&& rhs)const
     {
         return lhs+rhs;
     }

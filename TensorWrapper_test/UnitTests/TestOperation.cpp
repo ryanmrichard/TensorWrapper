@@ -1,67 +1,63 @@
 #include <TensorWrapper/Operation.hpp>
+#include <TensorWrapper/OperationImpls.hpp>
+#include <TensorWrapper/TensorPtr.hpp>
+#include <Eigen/Dense>
+
 #include "TestHelpers.hpp"
 #include <vector>
+
+/** \file Tests to ensure the Operation class as well as the various
+ *  OperationImpl classes are working correctly.
+ *
+ *
+ */
 using namespace TWrapper;
 using namespace detail_;
 
-//Simulates a tensor backend specific operation
-struct CounterGuts{
-    template<typename T>
-    auto eval(T val)
-    {
-        return val+1;
-    }
-};
-
-//Simulates a TensorWrapper operation
-struct Counter{
-    template<typename Impl_t,typename T>
-    auto eval(Impl_t impl,T val)
-    {
-        return impl.eval(val);
-    }
-};
-
-//Simulates binary tensor backend operation
-struct AddGuts{
-    template<typename lhs_t,typename rhs_t>
-    auto eval(lhs_t lhs, rhs_t rhs)
-    {
-        return lhs+rhs;
-    }
-};
-
-//Simulates binary TensorWrapper operation
-struct Add{
-    template<typename Impl_t,typename lhs_t,typename rhs_t>
-    auto eval(Impl_t impl,lhs_t lhs, rhs_t rhs)
-    {
-        return impl.eval(lhs,rhs);
-    }
-};
+using pTensor=TensorPtr<2,double>;
 
 int main()
 {
     Tester tester("Testing Operation class");
-    size_t zero=0;
 
-    //Nothing like unrolling expression templating...
-    Operation<Counter,size_t> depth1(Counter(),zero);
-    Operation<Counter,decltype(depth1)> depth2(Counter(),depth1);
-//    Operation<Counter,decltype(depth2)> depth3(Counter(),depth2);
-//    Operation<Counter,decltype(depth3)> depth4(Counter(),depth3);
-//    Operation<Counter,decltype(depth4)> sum(Counter(),depth4);
-    size_t total=depth2.eval(CounterGuts());
-    tester.test("Unary",total==5);
+    constexpr TensorTypes type=TensorTypes::EigenMatrix;
+    Eigen::MatrixXd value=Eigen::MatrixXd::Zero(10,10);
+    pTensor my_tensor(type,value);
+    const pTensor& const_mytensor=const_cast<const pTensor&>(my_tensor);
+    auto& actual_tensor=my_tensor.cast<type>();
 
-//    Operation<Add,size_t,size_t> add_depth1(Add(),total,total);//10
-//    Operation<Add,decltype(add_depth1),size_t> add_depth2(Add(),add_depth1,total);//15
-//    Operation<Add,decltype(add_depth2),size_t> add_depth3(Add(),add_depth2,total);//20
-//    Operation<Add,decltype(add_depth3),size_t> add_depth4(Add(),add_depth3,total);//25
-//    Operation<Add,decltype(add_depth4),size_t> add_sum(Add(),add_depth4,total);//30
+    //Dereference Op
+    using DeRef_t=DeRef<2,double>;
+    auto deref_op=make_op<DeRef_t>(my_tensor);
+    auto& deref_result=eval_op(type,deref_op);
+    tester.test("Deref result",deref_result==value);
+    tester.test("Not a copy",&deref_result==&actual_tensor);
 
-//    total=add_sum.eval(AddGuts());
-//    tester.test("Binary",total==30);
+    auto cderef_op=make_op<DeRef_t>(const_mytensor);
+    auto& cderef_op_result=eval_op(type,cderef_op);
+    tester.test("Const Deref result",cderef_op_result==value);
+    tester.test("Const Not a copy",&cderef_op_result==&actual_tensor);
+
+    //Dimensions Op
+    using DimOp=DimsOp<2,double>;
+    Shape<2> right({10,10},false);
+    auto dim_op=make_op<DimOp>(value);
+    auto dim_op_result=eval_op(type,dim_op);
+    tester.test("Dimensions Op",dim_op_result==right);
+
+    //Add Op
+    using Add=AddOp<2,double>;
+    auto add_op=make_op<Add>(value,value);
+    auto add_result=eval_op(type,add_op);
+    tester.test("Addition",add_result==(value+value));
+
+    //Equal
+    using Equal=EqualOp<2,double>;
+    auto equal_op=make_op<Equal>(value,value);
+    auto equal_result=eval_op(type,equal_op);
+    tester.test("Equal",equal_result=(value==value));
+
+
 
     return tester.results();
 }
