@@ -20,15 +20,7 @@ struct TensorWrapperImpl<2,T,TensorTypes::EigenMatrix> {
     }
 
     template<typename Tensor_t>
-    MemoryBlock<2,const T> get_memory(const Tensor_t& impl)const{
-        //Eigen annoyingly doesn't return a reference for const matrices
-        return MemoryBlock<2,const T>(dims(impl),dims(impl).dims(),
-               [&](const array_t& idx)->const T&{
-            return const_cast<Tensor_t&>(impl)(idx[0],idx[1]);});
-    }
-
-    template<typename Tensor_t>
-    MemoryBlock<2,T> get_memory(Tensor_t& impl)const{
+    MemoryBlock<2,T> get_memory(Tensor_t&& impl)const{
         return MemoryBlock<2,T>(dims(impl),dims(impl).dims(),
                [&](const array_t& idx)->T&{return impl(idx[0],idx[1]);});
     }
@@ -36,6 +28,9 @@ struct TensorWrapperImpl<2,T,TensorTypes::EigenMatrix> {
     template<typename Tensor_t>
     void set_memory(Tensor_t& impl,const MemoryBlock<2,T>& block)const
     {
+        //Check if it's actually the T* of this tensor
+        if(&block(0,0)==&impl(block.start[0],block.start[1]))
+            return;
         for(const auto& idx:block.local_shape)
                 impl(idx[0]+block.start[0],idx[1]+block.start[1])=block(idx);
     }
@@ -120,15 +115,6 @@ struct TensorWrapperImpl<1,T,TensorTypes::EigenMatrix> {
         return Shape<1>(array_t{(size_t)impl.rows()},impl.IsRowMajor);
     }
 
-
-    template<typename Tensor_t>
-    auto get_memory(const Tensor_t& impl)const{
-        //Eigen annoyingly doesn't return a reference for const matrices
-        return MemoryBlock<1,const T>(dims(impl),dims(impl).dims(),
-               [&](const array_t& idx)->const T&{
-            return const_cast<Tensor_t&>(impl)(idx[0]);});
-    }
-
     template<typename Tensor_t>
     auto get_memory(Tensor_t& impl)const{
         return MemoryBlock<1,T>(dims(impl),dims(impl).dims(),
@@ -150,7 +136,7 @@ struct TensorWrapperImpl<1,T,TensorTypes::EigenMatrix> {
     auto slice(const Tensor_t& impl,
                const array_t& start,
                const array_t& end)const{
-        return type(impl.segment(start[0],end[0]));
+        return type(impl.segment(start[0],end[0]-start[0]));
     }
 
     ///Returns true if two tensors are equal

@@ -7,6 +7,8 @@ namespace detail_ {
 template<size_t rank,typename T,TensorTypes LHS_t,TensorTypes RHS_t>
 struct TensorConverter;
 
+//Eigen tensor only supports comma seperated initialization and not array
+//This and the next function unroll the array
 template <typename Tensor_t, size_t rank, std::size_t... I>
 auto allocate_guts(const std::array<size_t,rank>& idx, std::index_sequence<I...>)
 {
@@ -45,14 +47,6 @@ struct TensorWrapperImpl<rank,T,TensorTypes::EigenTensor> {
         auto dim=impl.dimensions();
         for(size_t i=0;i<rank;++i)dims[i]=dim[i];
         return Shape<rank>(dims,impl.Layout==Eigen::RowMajor);
-    }
-
-    template<typename Tensor_t>
-    MemoryBlock<rank,const T> get_memory(const Tensor_t& impl)const{
-        //Eigen annoyingly doesn't return a reference for const matrices
-        return MemoryBlock<rank,const T>(dims(impl),dims(impl).dims(),
-               [&](const array_t& idx)->const T&{
-            return impl(idx);});
     }
 
     template<typename Tensor_t>

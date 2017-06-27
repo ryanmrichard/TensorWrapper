@@ -22,14 +22,6 @@ struct MemoryFunctor{
     {
         return buffer_[shape_.flat_index(idx)];
     }
-
-    ~MemoryFunctor()
-    {
-        std::array<size_t,rank> temp{};
-        for(size_t i=0;i<rank;++i)
-            temp[i]=shape_.origin()[i]+shape_.dims()[i];
-        parent_.set_values(shape_.origin(),temp,buffer_.data());
-    }
 };
 
 template<size_t rank, typename T>

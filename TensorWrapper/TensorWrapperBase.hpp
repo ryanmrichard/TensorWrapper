@@ -67,7 +67,25 @@ public:
         return  detail_::make_op<detail_::DeRef<R,T>>(tensor_);
     }
 
-    detail_::TensorTypes type()const{return ttype_;}
+    ///\copydoc de_ref()const
+    auto de_ref()->
+        decltype(detail_::make_op<detail_::DeRef<R,T>>(tensor_))
+    {
+        return detail_::make_op<detail_::DeRef<R,T>>(tensor_);
+    }
+
+    /** \brief Returns the TensorType of the backend used to create this
+     *  instance.
+     *
+     *  This function is largely intended as an implementation detail, but
+     *  I wanted to avoid declaring lots of operators as friends of this class.
+     *
+     *  \return The enumeration corresponding to the backend used to create this
+     *   instance.
+     *
+     *  \throws No throw guarantee.
+     */
+    detail_::TensorTypes type()const noexcept{return ttype_;}
 
     ///The type of a "rank"-dimensional vector of indices
     using index_t=std::array<size_t,R>;
@@ -120,7 +138,14 @@ public:
     TensorWrapperBase& operator=(TensorWrapperBase&&)noexcept=default;
 
 
-    virtual ~TensorWrapperBase(){}
+    /** \brief Destructs the current TensorWrapperBase instance.
+     *
+     *  All members of this class are managed and thus the default destructor is
+     *  fine.  That said, although the TensorWrapper library promises not to
+     *  throw in a destructor it may be the case that the backend does throw.
+     *
+     */
+    virtual ~TensorWrapperBase()=default;
 
     ///@{
     ///Returns the rank of the wrapped tensor
@@ -138,15 +163,19 @@ public:
     /** \brief Returns an element of the tensor. This is a convenience API and
      *         is slow.
      *
-     *  For production level code use get_memory or slice functions.
+     *  For production level code use get_memory/set_memory or slice functions.
      *
      *  \return The requested element.
      */
     T operator()(const index_t& idx)const
     {
+        //Grab a 1 x 1 x 1.... slice of the tensor and return its only element
         index_t p1,zeros{};
         for(size_t i=0;i<R;++i)p1[i]=idx[i]+1;
-        return slice(idx,p1).get_memory()(zeros);
+        auto op=detail_::make_op<detail_::EraseType<R,T>>(slice(idx,p1));
+        auto temp=TensorWrapperBase<R,T>(std::move(detail_::eval_op(ttype_,op)),
+                                         ttype_);
+        return temp.get_memory()(zeros);
     }
 
     /** \brief Syntactic sugar for accessing an element of the tensor using a
@@ -176,28 +205,57 @@ public:
         return (*this)(index_t{elem1,args...});
     }
 
-    TensorWrapperBase<R,T> slice(const index_t& start,
-                                 const index_t& end)const
+
+    /** \brief Returns an operation that can grab a slice of the current tensor.
+     *
+     *
+     *
+     */
+    auto slice(const index_t& start,const index_t& end)const->
+        decltype(detail_::make_op<detail_::SliceOp<R,T>>(de_ref(),start,end))
     {
-//        return detail_::downcast(tensor_,ttype_,
-//                   detail_::SliceOp<R,T>(),start,end);
-    }
-    MemoryBlock<R,const T> get_memory()const
-    {
-//        return detail_::downcast(tensor_,ttype_,
-//                   detail_::GetMemoryOp<R,const T>());
+        return detail_::make_op<detail_::SliceOp<R,T>>(de_ref(),start,end);
     }
 
+
+    /** \brief Together with set_memory allows reading and writing to the local
+     *         elements of the tensor
+     *
+     *   Reading and writing to a tensor is complicated as the backends hold the
+     *   data in all sorts of interesting ways.  This call returns an API to
+     *   the memory the current process is responsible for.  For tensor backends
+     *   where all of the tensor is local this is the entire tensor, whereas for
+     *   distributed tensor backends this is only the slice you hold locally.
+     *   Whereas the slice API returns a new tensor, this call, roughly
+     *   speaking, returns the raw pointer.  That is to say writes to the
+     *   resulting MemoryBlock instance will (see note below) actually change
+     *   the memory of the current TensorWrapperBase instance.  You should not
+     *   write to the resulting instance unless you intend for your changes to
+     *   modify the tensor (use slice if you do not want your writes to do
+     *   this).  Finally, since this call always returns the local memory it
+     *   can not be used to write to remote parts of the tensor; to do this
+     *   you'll need to make your own MemoryBlock instance, write to it and then
+     *   call set_memory.
+     *
+     *   \note If the backend is local your writes will likely take effect
+     *   immediatly; however, depending on the backend, this may not be true for
+     *   distributed tensors.  This is why you should always call set_memory.
+     *   As long as your backend is hooked in well, the set_memory call will
+     *   determine whether it really needs to copy the elements over.
+     *
+     *   \returns A slightly wrapped raw pointer to the data inside the tensor.
+     *
+     */
     MemoryBlock<R,T> get_memory()
     {
-//        return detail_::downcast(tensor_,ttype_,
-//                                       detail_::GetMemoryOp<R,T>());
+        auto op=detail_::make_op<detail_::GetMemoryOp<R,T>>(de_ref());
+        return detail_::eval_op(ttype_,op);
     }
 
-    void set_slice(const MemoryBlock<R,T>& other)
+    void set_memory(const MemoryBlock<R,T>& other)
     {
-//        detail_::downcast(tensor_,ttype_,
-//                                detail_::SetMemoryOp<R,T>(),other);
+        auto op=detail_::make_op<detail_::SetMemoryOp<R,T>>(de_ref(),other);
+        detail_::eval_op(ttype_,op);
     }
 
 //    ///API for contraction

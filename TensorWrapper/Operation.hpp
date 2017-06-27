@@ -122,7 +122,8 @@ class Operation{
 
 
 
-public:   
+public:
+
     Operation(Args&&...args):
         args_(std::forward<Args>(args)...)
     {}
@@ -141,30 +142,30 @@ Operation<fxn_t,Args...> make_op(Args&&...args)
     return Operation<fxn_t,Args...>(std::forward<Args>(args)...);
 }
 
+///Functor to be used with the next function, calls eval on the operation
+struct EvalOpFunctor{
+    template<TensorTypes T1,typename...Args>
+    auto eval(const Operation<Args...>& arg)->decltype(arg.template eval<T1>())
+    {
+        return arg.template eval<T1>();
+    }
+
+};
+
 /** \brief A convenience function for evaluating a nested operation
- *
- *
- *  \note In deducing the return type we exploit the fact that in C++
- *  a function can not be overloaded based on return type alone.  What this
- *  means for this function to even compile it must be the case that all of
- *  the multiple returns resolve to the same type (or a type that is
- *  implicitly convertible to said type).
- *
  *
  *  \return The result of the operation, the exact value of which depends on
  *  the operation being evaluated.
  */
 template<typename...Args>
 auto eval_op(TensorTypes type,const Operation<Args...>& arg)->
-    decltype(arg.template eval<TensorTypes::EigenMatrix>())
+    decltype(apply_TensorTypes<EvalOpFunctor>(type,arg))
 {
-    if(type==TensorTypes::EigenMatrix)
-        return arg.template eval<TensorTypes::EigenMatrix>();
-//    else if(type==TensorTypes::EigenTensor)
-//        return arg.template eval<TensorTypes::EigenTensor>();
-    //Shouldn't ever be able to get here
-    throw std::out_of_range("Tensor type is not recognized");
+    return apply_TensorTypes<EvalOpFunctor>(type,arg);
 }
+
+
+
 
 
 }}//End namespaces
