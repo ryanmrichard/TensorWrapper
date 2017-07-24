@@ -46,7 +46,7 @@ int main()
     tester.test("Values",_A==A);
 
     eigen_matrix D=A+B+C;
-    matrix_type _D=_A+_B+_C;
+    matrix_type _D=_A+_B;//+_C;
     tester.test("Addition",_D==D);
 
     eigen_matrix E=0.5*D;

@@ -3,7 +3,8 @@ if(${ENABLE_GlobalArrays})
     NEW_TEST(TestGAWrapper UnitTests)
 endif()
 foreach(name TestEigen TestEigenTensor TestContraction TestConversions
-             TestShape TestMemory TestTensorPtr TestOperation
+             TestShape TestMemory TestTensorPtr
+             TestOperation
 )
     NEW_TEST(${name} UnitTests)
 endforeach()

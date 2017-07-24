@@ -2,30 +2,30 @@
 #include <iostream>
 #include "TestHelpers.hpp"
 
-//using namespace TWrapper;
-//using tensor_type=TensorWrapper<2,double,detail_::TensorTypes::EigenTensor>;
-//using wrapped_type=tensor_type::wrapped_t;
-//using idx_t=Eigen::IndexPair<int>;
-//template<size_t n>
-//using idx_array=std::array<idx_t,n>;
+using namespace TWrapper;
+using tensor_type=EigenTensor<2,double>;
+using wrapped_type=tensor_type::wrapped_t;
+using idx_t=Eigen::IndexPair<int>;
+template<size_t n>
+using idx_array=std::array<idx_t,n>;
 int main()
 {
     Tester tester("Testing Eigen Tensor Wrapping");
-//    const size_t dim=10;
-//    detail_::TensorConverter<2,double,detail_::TensorTypes::EigenTensor,
-//            detail_::TensorTypes::EigenMatrix> converter;
-//    Eigen::MatrixXd __A=Eigen::MatrixXd::Random(dim,dim),
-//                    __B=Eigen::MatrixXd::Random(dim,dim),
-//                    __C=Eigen::MatrixXd::Random(dim,dim);
-//    wrapped_type A=converter.convert(__A),
-//                 B=converter.convert(__B),
-//                 C=converter.convert(__C);
-//    tensor_type Default;
-//    Default=tensor_type(std::array<size_t,2>{dim,dim});
-//    tensor_type _A(A),_B(B),_C(C);
-//    wrapped_type D=A+B+C;
-//    tensor_type _D=_A+_B+_C;
-//    tester.test("Addition",_D==D);
+    const size_t dim=10;
+    detail_::TensorConverter<2,double,detail_::TensorTypes::EigenTensor,
+            detail_::TensorTypes::EigenMatrix> converter;
+    Eigen::MatrixXd __A=Eigen::MatrixXd::Random(dim,dim),
+                    __B=Eigen::MatrixXd::Random(dim,dim),
+                    __C=Eigen::MatrixXd::Random(dim,dim);
+    wrapped_type A=converter.convert(__A),
+                 B=converter.convert(__B),
+                 C=converter.convert(__C);
+    tensor_type Default;
+    Default=tensor_type(std::array<size_t,2>{dim,dim});
+    tensor_type _A(A),_B(B),_C(C);
+    wrapped_type D=A+B+C;
+    tensor_type _D=_A+_B;//+_C;
+    tester.test("Addition",_D==D);
 //    Shape<2> corr_shape(std::array<size_t,2>{dim,dim},false);
 //    tester.test("Tensors are same",_D==D);
 //    //Test all local memory

@@ -28,36 +28,34 @@ int main()
 
     //Dereference Op
     using DeRef_t=DeRef<2,double>;
-    auto deref_op=make_op<DeRef_t>(my_tensor);
-    auto& deref_result=eval_op(type,deref_op);
+    auto deref_op=make_op<2,double,DeRef_t>(my_tensor);
+    auto& deref_result=deref_op.template eval<type>();
     tester.test("Deref result",deref_result==value);
     tester.test("Not a copy",&deref_result==&actual_tensor);
 
-    auto cderef_op=make_op<DeRef_t>(const_mytensor);
-    auto& cderef_op_result=eval_op(type,cderef_op);
+    auto cderef_op=make_op<2,double,DeRef_t>(const_mytensor);
+    auto& cderef_op_result=cderef_op.template eval<type>();
     tester.test("Const Deref result",cderef_op_result==value);
     tester.test("Const Not a copy",&cderef_op_result==&actual_tensor);
 
     //Dimensions Op
     using DimOp=DimsOp<2,double>;
     Shape<2> right({10,10},false);
-    auto dim_op=make_op<DimOp>(value);
-    auto dim_op_result=eval_op(type,dim_op);
+    auto dim_op=make_op<2,double,DimOp>(value);
+    auto dim_op_result=dim_op.template eval<type>();
     tester.test("Dimensions Op",dim_op_result==right);
 
     //Add Op
     using Add=AddOp<2,double>;
-    auto add_op=make_op<Add>(value,value);
-    auto add_result=eval_op(type,add_op);
+    auto add_op=make_op<2,double,Add>(value,value);
+    auto add_result=add_op.template eval<type>();
     tester.test("Addition",add_result==(value+value));
 
     //Equal
     using Equal=EqualOp<2,double>;
-    auto equal_op=make_op<Equal>(value,value);
-    auto equal_result=eval_op(type,equal_op);
+    auto equal_op=make_op<2,double,Equal>(value,value);
+    auto equal_result=equal_op.template eval<type>();
     tester.test("Equal",equal_result=(value==value));
-
-
 
     return tester.results();
 }
