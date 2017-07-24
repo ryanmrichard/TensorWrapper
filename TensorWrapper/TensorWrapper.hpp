@@ -15,6 +15,7 @@ private:
     using Impl_t=detail_::TensorWrapperImpl<Rank,T,T1>;
     Impl_t impl_;
     using tensor_ptr=detail_::TensorPtr<Rank,T>;
+
 public:
     ///The type of an instance of this class
     using my_type=TensorWrapper<Rank,T,T1>;
@@ -25,12 +26,13 @@ public:
     ///The type wrapped by this class
     using wrapped_t=typename detail_::TensorWrapperImpl<Rank,T,T1>::type;
 
+    ///The type of an index
+    using index_t=std::array<size_t,Rank>;
+
     ///\copydoc TensorWrapperBase()
     TensorWrapper():
         base_type(T1)
     {}
-
-
     template<typename RHS_t,
              typename detail_::EnableIfAnOperation<RHS_t>::type=0>
     TensorWrapper(RHS_t&& op):
@@ -67,10 +69,8 @@ public:
         base_type(std::move(tensor_ptr(T1,std::forward<RHS_t>(other))),T1)
     {}
 
-
-
     template<typename...Args>
-    TensorWrapper& operator=(const detail_::Operation<Args...>& op)
+    TensorWrapper& operator=(const detail_::Operation<Rank,Args...>& op)
     {
         auto result=op.template eval<T1>();
         base_type::tensor_=std::move(detail_::TensorPtr<Rank,T>(T1,result));
@@ -83,7 +83,7 @@ public:
      *  After calling this constructor the memory is allocated, but in an
      *  undefined initialization state.
      */
-    TensorWrapper(const std::array<size_t,Rank>& dims):
+    TensorWrapper(const index_t& dims):
         base_type(T1)
     {
         base_type::tensor_=
@@ -95,6 +95,63 @@ public:
     TensorWrapper(my_type&&)=default;
     my_type& operator=(const my_type&)=default;
     my_type& operator=(my_type&&)=default;
+
+    Shape<Rank> shape()const override
+    {
+        auto op=detail_::make_op<Rank,T,detail_::DimsOp<Rank,T>>
+                (this->de_ref());
+        return op.template eval<T1>();
+    }
+
+    T operator()(const index_t& idx)const override
+    {
+        //Grab a 1 x 1 x 1.... slice of the tensor and return its only element
+        index_t p1,zeros{};
+        for(size_t i=0;i<Rank;++i)p1[i]=idx[i]+1;
+        auto op=detail_::make_op<Rank,T,detail_::EraseType<Rank,T>>(
+                    this->slice(idx,p1)
+                    );
+        my_type temp(std::move(op.template eval<T1>()));
+        return temp.get_memory()(zeros);
+    }
+
+    template<typename...Args>
+    T operator()(size_t elem1,Args...args)const
+    {
+        return (*this)(elem1,args...);
+    }
+
+    MemoryBlock<Rank,T> get_memory() override
+    {
+        auto op=detail_::make_op<Rank,T,detail_::GetMemoryOp<Rank,T>>
+                (this->de_ref());
+        return op.template eval<T1>();
+    }
+
+    void set_memory(const MemoryBlock<Rank,T>& other)override
+    {
+        auto op=detail_::make_op<Rank,T,detail_::SetMemoryOp<Rank,T>>(
+                    this->de_ref(),other);
+        op.template eval<T1>();
+    }
+
+
+    template<typename RHS_t>
+    bool operator==(RHS_t&& rhs)const
+    {
+        auto op = (this->de_ref()==std::forward<RHS_t>(rhs));
+        return op.template eval<T1>();
+    }
+
+    template<typename RHS_t>
+    bool operator!=(RHS_t&& rhs)const
+    {
+        return !((*this)==std::forward<RHS_t>(rhs));
+    }
+
+    using base_type::operator+;
+    using base_type::operator-;
+    using base_type::operator*;
  };
 
 //template<typename T, detail_::TensorTypes T1>
@@ -110,43 +167,21 @@ template<typename T>
 using EigenVector=TensorWrapper<1,T,detail_::TensorTypes::EigenMatrix>;
 template<typename T>
 using EigenMatrix=TensorWrapper<2,T,detail_::TensorTypes::EigenMatrix>;
-//template<size_t rank,typename T>
-//using EigenTensor=TensorWrapper<rank,T,detail_::TensorTypes::EigenTensor>;
+template<size_t rank,typename T>
+using EigenTensor=TensorWrapper<rank,T,detail_::TensorTypes::EigenTensor>;
 
+}//End namespace TWrapper
 
-namespace detail_ {
-
-//template<size_t rank,typename T,TensorTypes LHS_t,TensorTypes RHS_t>
-//struct TensorConverter{
-//    /** \brief Generic operation for converting two tensors.
-//     *
-//     *   For performance it is recommended that you specialize this class.  However,
-//     *   as this will require N choose 2 specializations, where N is the number of
-//     *   backends, this can quickly become too much, especially when most of them
-//     *   are going to amount to deep copies anyways.  This implementation will do
-//     *   the deep copy for you.  Because the tensor we are converting from may not
-//     *   all be local we can't just call get_memory.  Instead, we need to get the
-//     *   whole tensor as a slice (which guarantees that our tensor is local) and
-//     *   then call get_memory.
-//     *
-//     */
-//    template<typename Tensor_t>
-//    static auto convert(const Tensor_t& rhs)
-//    {
-//        TensorWrapper<rank,T,RHS_t> wrapped_rhs(rhs);
-//        std::array<size_t,rank> start{};
-//        auto local=wrapped_rhs.get_slice(start,wrapped_rhs.dims());
-//        TensorWrapper<rank,T,LHS_t> rv(wrapped_rhs.dims());
-//        rv.set_slice(local.get_memory());
-//        return rv;
-//    }
-
-//};
-
+template<typename LHS_t,typename T, TWrapper::detail_::TensorTypes T1,size_t R>
+bool operator==(LHS_t&& lhs,const TWrapper::TensorWrapper<R,T,T1>& t)
+{
+    return t==std::forward<LHS_t>(lhs);
 }
 
+template<typename LHS_t,typename T, size_t R, TWrapper::detail_::TensorTypes T1>
+bool operator!=(LHS_t&& lhs,const TWrapper::TensorWrapper<R,T,T1>& t)
+{
+    return t!=std::forward<LHS_t>(lhs);
 }
-//All the operator overload definitions
-#include "TensorWrapper/TWOperators.hpp"
 
 #include "TensorWrapper/EnableUselessWarnings.hpp"

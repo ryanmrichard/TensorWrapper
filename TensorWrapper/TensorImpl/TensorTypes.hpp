@@ -30,7 +30,7 @@ auto apply_TensorTypes(TensorTypes type,Args&&...args)->
 decltype(TTGuts(TensorTypes::EigenMatrix))
 {
     TTEntry(TensorTypes::EigenMatrix)
-    //TTEntry(TensorTypes::EigenTensor)
+    TTEntry(TensorTypes::EigenTensor)
     throw std::logic_error("I don't know what crazy tensor you're trying to"
                             " get, but I don't know how to make it.");
 }

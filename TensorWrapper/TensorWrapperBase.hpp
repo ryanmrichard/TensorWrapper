@@ -6,6 +6,8 @@
 #include "TensorWrapper/TensorImpl/TensorTypes.hpp"
 #include "TensorWrapper/Operation.hpp"
 #include "TensorWrapper/OperationImpls.hpp"
+#include "TensorWrapper/Traits.hpp"
+#include<random>
 
 namespace TWrapper {
 /** \brief  The class that actually does tensor-y stuff.
@@ -48,31 +50,29 @@ protected:
         ttype_(ttype)
     {}
 
-
-
-public:
-
     /** \brief Sets up an operation that can derefence the TensorPtr
      *
-     *  This function is largely intended as an implementation detail, but
-     *  I wanted to avoid declaring lots of operators as friends of this
-     *  class.
+     * This function is primarily used to start the operation chaining.
      *
      * \return An operation that when evaluated will return the actual
      *  tensor by reference.
      */
     auto de_ref()const->
-        decltype(detail_::make_op<detail_::DeRef<R,T>>(tensor_))
+        decltype(detail_::make_op<R,T,detail_::DeRef<R,T>>(tensor_))
     {
-        return  detail_::make_op<detail_::DeRef<R,T>>(tensor_);
+        return detail_::make_op<R,T,detail_::DeRef<R,T>>(tensor_);
     }
 
     ///\copydoc de_ref()const
     auto de_ref()->
-        decltype(detail_::make_op<detail_::DeRef<R,T>>(tensor_))
+        decltype(detail_::make_op<R,T,detail_::DeRef<R,T>>(tensor_))
     {
-        return detail_::make_op<detail_::DeRef<R,T>>(tensor_);
+        return detail_::make_op<R,T,detail_::DeRef<R,T>>(tensor_);
     }
+
+
+    template<detail_::TensorTypes T1>
+    using ConvertedType=typename detail_::TensorWrapperImpl<R,T,T1>::type;
 
     /** \brief Returns the TensorType of the backend used to create this
      *  instance.
@@ -86,6 +86,21 @@ public:
      *  \throws No throw guarantee.
      */
     detail_::TensorTypes type()const noexcept{return ttype_;}
+
+public:
+
+    template<detail_::TensorTypes T1>
+    ConvertedType<T1> eval()const
+    {
+        return de_ref().template eval<T1>();
+    }
+
+    ///\copydoc eval()const
+    template<detail_::TensorTypes T1>
+    ConvertedType<T1> eval()
+    {
+       return de_ref().template eval<T1>();
+    }
 
     ///The type of a "rank"-dimensional vector of indices
     using index_t=std::array<size_t,R>;
@@ -152,11 +167,8 @@ public:
     constexpr size_t rank()const{return R;}
 
     ///Returns the shape of the wrapped tensor
-    Shape<R> shape()const
-    {
-        auto op= detail_::make_op<detail_::DimsOp<R,T>>(de_ref());
-        return detail_::eval_op(ttype_,op);
-    }
+    virtual Shape<R> shape()const=0;
+
     ///@}
 
 
@@ -167,16 +179,8 @@ public:
      *
      *  \return The requested element.
      */
-    T operator()(const index_t& idx)const
-    {
-        //Grab a 1 x 1 x 1.... slice of the tensor and return its only element
-        index_t p1,zeros{};
-        for(size_t i=0;i<R;++i)p1[i]=idx[i]+1;
-        auto op=detail_::make_op<detail_::EraseType<R,T>>(slice(idx,p1));
-        auto temp=TensorWrapperBase<R,T>(std::move(detail_::eval_op(ttype_,op)),
-                                         ttype_);
-        return temp.get_memory()(zeros);
-    }
+    virtual T operator()(const index_t& idx)const=0;
+
 
     /** \brief Syntactic sugar for accessing an element of the tensor using a
      *         comma separated list of indices rather than an object of type
@@ -212,9 +216,9 @@ public:
      *
      */
     auto slice(const index_t& start,const index_t& end)const->
-        decltype(detail_::make_op<detail_::SliceOp<R,T>>(de_ref(),start,end))
+        decltype(detail_::make_op<R,T,detail_::SliceOp<R,T>>(de_ref(),start,end))
     {
-        return detail_::make_op<detail_::SliceOp<R,T>>(de_ref(),start,end);
+        return detail_::make_op<R,T,detail_::SliceOp<R,T>>(de_ref(),start,end);
     }
 
 
@@ -246,16 +250,27 @@ public:
      *   \returns A slightly wrapped raw pointer to the data inside the tensor.
      *
      */
-    MemoryBlock<R,T> get_memory()
+    virtual MemoryBlock<R,T> get_memory()=0;
+
+    virtual void set_memory(const MemoryBlock<R,T>& other)=0;
+
+    template<typename RHS_t>
+    auto operator+(RHS_t&& lhs)const->
+    decltype(de_ref()+(std::forward<RHS_t>(lhs)))
     {
-        auto op=detail_::make_op<detail_::GetMemoryOp<R,T>>(de_ref());
-        return detail_::eval_op(ttype_,op);
+        return de_ref()+std::forward<RHS_t>(lhs);
     }
 
-    void set_memory(const MemoryBlock<R,T>& other)
+    template<typename RHS_t>
+    auto operator-(RHS_t&& rhs)const->
+        decltype(de_ref()-std::forward<RHS_t>(rhs))
     {
-        auto op=detail_::make_op<detail_::SetMemoryOp<R,T>>(de_ref(),other);
-        detail_::eval_op(ttype_,op);
+        return de_ref()-std::forward<RHS_t>(rhs);
+    }
+
+    auto operator*(T&& value)const->decltype(de_ref()*std::forward<T>(value))
+    {
+        return de_ref()*std::forward<T>(value);
     }
 
 //    ///API for contraction
@@ -266,5 +281,31 @@ public:
 //    }
 };
 
+template<size_t R, typename T>
+TensorWrapperBase<R,T>& FillRandom(TensorWrapperBase<R,T>& tensor)
+{
+         auto mem=tensor.get_memory();
+         std::random_device rd;
+         std::mt19937 gen(rd());
+         std::uniform_real_distribution<> dis(0,10);
+         for(auto idx : mem.local_shape)
+             mem(idx)=dis(gen);
+         tensor.set_memory(mem);
+         return tensor;
+}
+
+
+template class TensorWrapperBase<1,double>;
+template class TensorWrapperBase<2,double>;
+template class TensorWrapperBase<3,double>;
 
 }//End namespace
+
+template<typename T, size_t R>
+auto operator*(T&& value, const TWrapper::TensorWrapperBase<R,T>& t)->
+  decltype(t*std::forward<T>(value))
+{
+    return t*std::forward<T>(value);
+}
+
+
