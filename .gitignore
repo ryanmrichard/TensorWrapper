@@ -5,3 +5,5 @@
 *.includes
 install.sh
 Debug/
+Release/
+build/

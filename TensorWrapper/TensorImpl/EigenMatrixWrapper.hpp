@@ -5,6 +5,63 @@
 namespace TWrapper {
 namespace detail_ {
 
+template<size_t NFree, size_t NDummy, bool rows_same, bool cols_same>
+struct ContractionHelper{};
+
+#define CHelperSpecial(NFree,NDummy,ltranspose,rtranspose,guts)\
+template<>\
+struct ContractionHelper<NFree,NDummy,ltranspose,rtranspose>{\
+template<typename LHS_t,typename RHS_t>\
+auto contract(const LHS_t& lhs, const RHS_t& rhs){\
+   return guts;\
+}}
+
+//i,j * i,j or j,i * j,i
+CHelperSpecial(0,2,false,false,lhs.cwiseProduct(rhs).sum());
+//i,j * j,i or j,i * i,j
+CHelperSpecial(0,2,false,true,lhs.cwiseProduct(rhs.transpose()).sum());
+//i,j * k,j
+CHelperSpecial(1,1,false,true,lhs*rhs.transpose());
+//j,i * j,k
+CHelperSpecial(1,1,true,false,lhs.transpose()*rhs);
+//i,j * j,k
+CHelperSpecial(1,1,false,false,lhs*rhs);
+//j,i * k,j
+CHelperSpecial(1,1,true,true,lhs.transpose()*rhs.transpose());
+//i * i
+CHelperSpecial(0,1,false,false,lhs.dot(rhs));
+//i * j or j*i
+CHelperSpecial(1,0,false,true,lhs*rhs.transpose());
+
+#undef CHelperSpecial
+
+
+template<size_t R, typename T, typename Tensor_t>
+struct MemoryGetterHelper
+{
+
+    template<size_t...I>
+    MemoryBlock<R,T> eval_guts(const Shape<R>& shape,
+                                     const std::array<size_t,R> dims,
+                                     Tensor_t& t,
+                                     std::index_sequence<I...>)const
+         {
+             return MemoryBlock<R,T>(shape,dims,
+                 [&](const std::array<size_t,R>& idx)->
+                                     T&{return t(idx[I]...);});
+         }
+
+
+    MemoryBlock<R,T> eval(const Shape<R>& shape,
+                                const std::array<size_t,R> dims,
+                                Tensor_t& t)const
+    {
+        return eval_guts(shape,dims,t,std::make_index_sequence<R>());
+    }
+
+};
+
+
 //Matrix specialization
 template<typename T>
 struct TensorWrapperImpl<2,T,TensorTypes::EigenMatrix> {
@@ -20,9 +77,9 @@ struct TensorWrapperImpl<2,T,TensorTypes::EigenMatrix> {
     }
 
     template<typename Tensor_t>
-    MemoryBlock<2,T> get_memory(Tensor_t&& impl)const{
-        return MemoryBlock<2,T>(dims(impl),dims(impl).dims(),
-               [&](const array_t& idx)->T&{return impl(idx[0],idx[1]);});
+    auto get_memory(Tensor_t& impl)const{
+        MemoryGetterHelper<2,T,Tensor_t> helper;
+        return helper.eval(dims(impl),dims(impl).dims(),impl);
     }
 
     template<typename Tensor_t>
@@ -73,24 +130,26 @@ struct TensorWrapperImpl<2,T,TensorTypes::EigenMatrix> {
         return lhs-rhs;
     }
 
-    template<typename...Args> constexpr
-    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
-    contract(const Contraction<Args...>& ct)const{
-        static_assert(std::tuple_size<decltype(ct.tensors_)>::value==2,
-                      "Eigen can not contract more than two tensors at a time");
-        const auto& free=get_free_list(ct);
-        bool transpose1=ct.get_position(free[0],0)!=0;
-        bool transpose2=ct.get_position(free[1],1)!=1;
-        const auto& lhs=std::get<0>(ct.tensors_).tensor_;
-        const auto& rhs=std::get<1>(ct.tensors_).tensor_;
-        if(transpose1 && !transpose2)
-            return lhs.transpose()*rhs;
-        else if(transpose2 && !transpose1)
-            return lhs*rhs.transpose();
-        else if(transpose1 && transpose2)
-            return lhs.transpose()*rhs.transpose();
-        else
-            return lhs*rhs;
+
+    template<typename LHS_t,typename RHS_t,typename LHS_Idx,typename RHS_Idx>
+    auto contraction(const LHS_t& lhs, const RHS_t& rhs,
+                     const LHS_Idx,const RHS_Idx&)const
+    {
+        constexpr bool rows_same=
+                (LHS_Idx::template get<0>()==RHS_Idx::template get<0>());
+        constexpr bool cols_same=
+                (LHS_Idx::template get<1>()==RHS_Idx::template get<1>());
+        constexpr bool rowcol=
+                (LHS_Idx::template get<0>()==RHS_Idx::template get<1>());
+        constexpr bool all_same=(rows_same && cols_same);
+
+        constexpr bool transpose1=(rows_same || rowcol) && !all_same;
+        constexpr bool transpose2=(cols_same || rowcol) && !all_same;
+
+        constexpr size_t nfree=LHS_Idx::nunique(RHS_Idx());
+        constexpr size_t ndummy=LHS_Idx::ncommon(RHS_Idx());
+        return ContractionHelper<nfree,ndummy,transpose1,transpose2>().
+                contract(lhs,rhs);
     }
 
     template<typename My_t>
@@ -117,8 +176,8 @@ struct TensorWrapperImpl<1,T,TensorTypes::EigenMatrix> {
 
     template<typename Tensor_t>
     auto get_memory(Tensor_t& impl)const{
-        return MemoryBlock<1,T>(dims(impl),dims(impl).dims(),
-               [&](const array_t& idx)->T&{return impl(idx[0]);});
+        MemoryGetterHelper<1,T,Tensor_t> helper;
+        return helper.eval(dims(impl),dims(impl).dims(),impl);
     }
 
     template<typename Tensor_t>
@@ -166,24 +225,16 @@ struct TensorWrapperImpl<1,T,TensorTypes::EigenMatrix> {
         return lhs-rhs;
     }
 
-    template<typename...Args> constexpr
-    Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>
-    contract(const Contraction<Args...>& ct)const{
-        static_assert(std::tuple_size<decltype(ct.tensors_)>::value==2,
-                      "Eigen can not contract more than two tensors at a time");
-        const auto& free=get_free_list(ct);
-        bool transpose1=ct.get_position(free[0],0)!=0;
-        bool transpose2=ct.get_position(free[1],1)!=1;
-        const auto& lhs=std::get<0>(ct.tensors_).tensor_;
-        const auto& rhs=std::get<1>(ct.tensors_).tensor_;
-        if(transpose1 && !transpose2)
-            return lhs.transpose()*rhs;
-        else if(transpose2 && !transpose1)
-            return lhs*rhs.transpose();
-        else if(transpose1 && transpose2)
-            return lhs.transpose()*rhs.transpose();
-        else
-            return lhs*rhs;
+    template<typename LHS_t,typename RHS_t,typename LHS_Idx,typename RHS_Idx>
+    auto contraction(const LHS_t& lhs, const RHS_t& rhs,
+                     const LHS_Idx&,const RHS_Idx&)const
+    {
+        constexpr bool transpose=
+                (LHS_Idx::template get<0>()!=RHS_Idx::template get<0>());
+        constexpr size_t nfree=LHS_Idx::nunique(RHS_Idx());
+        constexpr size_t ndummy=LHS_Idx::ncommon(RHS_Idx());
+        return ContractionHelper<nfree,ndummy,false,transpose>().
+                contract(lhs,rhs);
     }
 };
 

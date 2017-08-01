@@ -1,7 +1,6 @@
 #pragma once
 #include <array>
 #include "TensorWrapper/Shape.hpp"
-#include "TensorWrapper/Contraction.hpp"
 #include "TensorWrapper/MemoryBlock.hpp"
 
 namespace TWrapper {
@@ -80,13 +79,6 @@ struct TensorWrapperImpl {
     void are_equal(const LHS_t&, const RHS_t&)const
     {
         static_assert(always_false<T>::value,"Tensor defines no are_equal() API");
-    }
-
-    ///Executes a contraction
-    template<typename...Args>
-    void contract(const Contraction<Args...>&)const
-    {
-        static_assert(always_false<T>::value,"Tensor defines no contract() API");
     }
 
     ///Scales the tensor

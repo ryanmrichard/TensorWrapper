@@ -1,22 +1,51 @@
 #pragma once
+#include <cstddef>
+#include <type_traits>
 
 namespace TWrapper {
+namespace detail_ {
+enum class TensorTypes;
+}
+
+template<size_t R, typename T, detail_::TensorTypes TT>
+class TensorWrapper;
+
 template<size_t R,typename T>
 class TensorWrapperBase;
 
 namespace detail_ {
 
+template<typename T>
+class OperationBase;
+
+///A type for discerning the rank and scalar type of a tensor
 template<typename tensor_t>
-struct TensorTraits;
+struct TensorTraits{
+    constexpr static bool value=false;
+};
 
 template<size_t R, typename T>
 struct TensorTraits<TWrapper::TensorWrapperBase<R,T>>
 {
+    constexpr static bool value=true;
     static const size_t rank=R;
     using scalar_type=T;
     using type=TWrapper::TensorWrapperBase<R,T>;
 };
 
+template<size_t R, typename T, TensorTypes TT>
+struct TensorTraits<TWrapper::TensorWrapper<R,T,TT>>
+{
+    constexpr static bool value=true;
+    static const size_t rank=R;
+    using scalar_type=T;
+    using type=TWrapper::TensorWrapper<R,T,TT>;
+};
+
+///Type for removing const/reference
+template<typename T>
+using CleanType=
+    typename std::remove_const<typename std::remove_reference<T>::type>::type;
 
 /** \brief A type for discerning if a type is convertable to a
  *         TensorWrapperBase instance
@@ -30,13 +59,7 @@ struct TensorTraits<TWrapper::TensorWrapperBase<R,T>>
  *  \tparam Other_t The type to check
  */
 template<typename Other_t>
-using IsATWrapper=
-    std::is_convertible<
-        typename std::remove_const<
-            typename std::remove_reference<Other_t>::type
-        >::type,
-    typename TensorTraits<Other_t>::type
-    >;
+using IsATWrapper=TensorTraits<CleanType<Other_t>>;
 
 /** \brief A type that enables a function if \p Other_t is not convertible to
  *         a TensorWrapperBase.
@@ -51,24 +74,22 @@ using IsATWrapper=
 template<typename Other_t>
 using EnableIfNotATWrapper=std::enable_if<!IsATWrapper<Other_t>::value,int>;
 
+///Type for discerning if another type is an Operation
 template<typename RHS_t>
 struct OperationTraits
 {
-    static constexpr bool value=false;
+    static constexpr bool value=
+            std::is_convertible<RHS_t,OperationBase<RHS_t>>::value;
 };
 
-template<size_t R, typename...RHS_t>
-struct OperationTraits<Operation<R,RHS_t...>>{
-    using type=Operation<R,RHS_t...>;
+template<typename RHS_t>
+struct OperationTraits<OperationBase<RHS_t>>{
+    using type=OperationBase<RHS_t>;
     static constexpr bool value=true;
 };
 
 template<typename RHS_t>
-using IsAnOperation=
-    OperationTraits<
-        typename std::remove_const<
-            typename std::remove_reference<RHS_t>::type
-        >::type>;
+using IsAnOperation=OperationTraits<CleanType<RHS_t>>;
 
 template<typename RHS_t>
 struct IsOpOrTW

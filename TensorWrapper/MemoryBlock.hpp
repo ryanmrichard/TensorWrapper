@@ -11,6 +11,9 @@ namespace TWrapper {
  *  \tparam rank The rank of the block we wrap
  *  \tparam T  The type of an element in the block we wrap
  *
+ *  \TODO: This concept is isomorphic to the iterators to an std::vector and
+ *  this class should be rewritten to be more like that.
+ *
  */
 template<size_t rank, typename T>
 class MemoryBlock{

@@ -1,0 +1,10 @@
+#pragma once
+
+namespace TWrapper {
+
+class TensorWrapperBase {
+    TensorPtr tensor_;
+};
+
+
+}//End namespace

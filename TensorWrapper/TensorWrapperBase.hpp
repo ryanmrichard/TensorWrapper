@@ -1,16 +1,22 @@
 #pragma once
-#include "TensorWrapper/Contraction.hpp"
-#include "TensorWrapper/Shape.hpp"
-#include "TensorWrapper/MemoryBlock.hpp"
 #include "TensorWrapper/TensorPtr.hpp"
-#include "TensorWrapper/TensorImpl/TensorTypes.hpp"
-#include "TensorWrapper/Operation.hpp"
-#include "TensorWrapper/OperationImpls.hpp"
-#include "TensorWrapper/Traits.hpp"
+#include "TensorWrapper/MemoryBlock.hpp"
 #include<random>
 
 namespace TWrapper {
-/** \brief  The class that actually does tensor-y stuff.
+
+
+/** \brief  The common base class of all the various implementations.
+ *
+ *  By time we are in this class we can't actually return values because we
+ *  have lost the details of how to compute them.  Rather, the base class
+ *  returns an operation that can be evaluated to get the result.  Typically
+ *  this evaluation happens in the constructor/assignment operation of a
+ *  TensorWrapper instance.
+ *
+ *  \note Copy/Move construction/assignment functions are protected to avoid
+ *  slicing.  Deep copies can be made from the base using the clone member
+ *  function.
  *
  *  \tparam R The rank of the tensor
  *  \tparam T The type of the scalars in the tensor.
@@ -18,159 +24,83 @@ namespace TWrapper {
 template<size_t R,typename T>
 class TensorWrapperBase{
 protected:
-    ///A type erased tensor
-    detail_::TensorPtr<R,T> tensor_;
+    ///The type of a type erased tensor
+    using pTensor=detail_::TensorPtr<R,T>;
 
-    ///That tensor's type
-    detail_::TensorTypes ttype_;
+    ///The type erased tensor
+    pTensor tensor_;
+
+    ///The type of an operation that converts the type-erased pointer
+    using de_ref_op=detail_::Convert<pTensor>;
 
     /** \brief Constructor used by derived classes after wrapping a tensor.
      *
      *
      *   \param[in] tensor The wrapped tensor we now own.  Memory allocation
      *                     etc. occurred in instantiating \p tensor.
-     *   \param[in] ttype  The enumeration corresponding to the backend to
-     *                     use for this tensor.
      *
-     *   \throws No throw guarantee.
+     *   \throws None No throw guarantee.
      */
-    TensorWrapperBase(detail_::TensorPtr<R,T>&& tensor,
-                      detail_::TensorTypes ttype)noexcept:
-        tensor_(std::move(tensor)),
-        ttype_(ttype)
+    TensorWrapperBase(pTensor&& tensor)noexcept:
+        tensor_(std::move(tensor))
     {}
 
-    /** \brief The constructor for when the tensor isn't ready yet.
+    /** \brief Deep copies another instance.
      *
-     *  Unlike the other protected constructor this constructor assumes
-     *  the derived class will be building
+     *   \throws std::bad_alloc if memory allocation fails.
+     */
+    TensorWrapperBase(const TensorWrapperBase&)=default;
+
+    /** \brief Takes ownership of another instance
+     *
      *
      */
-    TensorWrapperBase(detail_::TensorTypes ttype):
-        ttype_(ttype)
-    {}
-
-    /** \brief Sets up an operation that can derefence the TensorPtr
-     *
-     * This function is primarily used to start the operation chaining.
-     *
-     * \return An operation that when evaluated will return the actual
-     *  tensor by reference.
-     */
-    auto de_ref()const->
-        decltype(detail_::make_op<R,T,detail_::DeRef<R,T>>(tensor_))
-    {
-        return detail_::make_op<R,T,detail_::DeRef<R,T>>(tensor_);
-    }
-
-    ///\copydoc de_ref()const
-    auto de_ref()->
-        decltype(detail_::make_op<R,T,detail_::DeRef<R,T>>(tensor_))
-    {
-        return detail_::make_op<R,T,detail_::DeRef<R,T>>(tensor_);
-    }
+    TensorWrapperBase(TensorWrapperBase&&)noexcept=default;
 
 
-    template<detail_::TensorTypes T1>
-    using ConvertedType=typename detail_::TensorWrapperImpl<R,T,T1>::type;
 
-    /** \brief Returns the TensorType of the backend used to create this
-     *  instance.
-     *
-     *  This function is largely intended as an implementation detail, but
-     *  I wanted to avoid declaring lots of operators as friends of this class.
-     *
-     *  \return The enumeration corresponding to the backend used to create this
-     *   instance.
-     *
-     *  \throws No throw guarantee.
-     */
-    detail_::TensorTypes type()const noexcept{return ttype_;}
+    TensorWrapperBase& operator=(const TensorWrapperBase&)=default;
 
+    TensorWrapperBase& operator=(TensorWrapperBase&&)noexcept=default;
+
+
+    //For the moment I do not want to expose the TensorPtr class
+    //this allows Convert to grab it
+    friend class detail_::Convert<TensorWrapperBase<R,T>>;
 public:
-
-    template<detail_::TensorTypes T1>
-    ConvertedType<T1> eval()const
-    {
-        return de_ref().template eval<T1>();
-    }
-
-    ///\copydoc eval()const
-    template<detail_::TensorTypes T1>
-    ConvertedType<T1> eval()
-    {
-       return de_ref().template eval<T1>();
-    }
 
     ///The type of a "rank"-dimensional vector of indices
     using index_t=std::array<size_t,R>;
 
     /** \brief Constructs a null tensor instance
      *
-     *  The resulting instance is essentially a placeholder and can only be made
-     *  usable by assigning or moving a legit instance into it.
+     *  The only member of this class is the pointer to the tensor
+     *  implementation.  For all intents and purposes that instance will point
+     *  to nullptr after a call to this constructor.
      *
-     *  \throws Never throws.
+     *  \throws None No throw guarantee.
      */
     TensorWrapperBase()noexcept=default;
 
-    /** \brief Constructs a new instance via a deep copy of \p other
-     *
-     *  \note This constructor relies on the derived classes having no state
-     *        because it slices (in the C++ sense of the word) the class.
-     *
-     *  \param[in] other The tensor to deep copy.
-     *
-     *  \throws std::bad_alloc if there is insufficient memory for the copy.
-     *          Strong throw guarantee.
-     *
-     */
-    TensorWrapperBase(const TensorWrapperBase&)=default;
-
-    /** \brief Assigns a deep copy of \p other to the current instance.
-     *
-     *  \param[in] other The tensor to deep copy.
-     *  \return The current instance containing a deep copy of other.
-     *  \throws std::bad_alloc if the allocation fails.  Strong throw guarantee.
-     */
-    TensorWrapperBase& operator=(const TensorWrapperBase&)=default;
-
-    /** \brief Takes ownership of another TensorWrapper.
-     *
-     *  \param[in] other The instance we are taking over.
-     *
-     *  \throw No throw guarantee.
-     */
-    TensorWrapperBase(TensorWrapperBase&&)noexcept=default;
-
-    /** \brief Takes ownership of another TensorWrapper freeing up current
-     *         resources.
-     *
-     *  \param[in] other The tensor to take ownership of.
-     *  \returns The current instance, now with the contents of other.
-     *  \throws No throw guarantee.
-     */
-    TensorWrapperBase& operator=(TensorWrapperBase&&)noexcept=default;
+    virtual std::unique_ptr<TensorWrapperBase<R,T>> clone()const=0;
 
 
     /** \brief Destructs the current TensorWrapperBase instance.
      *
      *  All members of this class are managed and thus the default destructor is
-     *  fine.  That said, although the TensorWrapper library promises not to
-     *  throw in a destructor it may be the case that the backend does throw.
+     *  fine.
      *
+     *  \throws ??? The TensorWrapper library does not throw during
+     *  destruction; however, the implementations we are wrapping may.  If the
+     *  wrapped implementation throws during destruction this function will too.
      */
     virtual ~TensorWrapperBase()=default;
 
-    ///@{
     ///Returns the rank of the wrapped tensor
     constexpr size_t rank()const{return R;}
 
     ///Returns the shape of the wrapped tensor
     virtual Shape<R> shape()const=0;
-
-    ///@}
-
 
     /** \brief Returns an element of the tensor. This is a convenience API and
      *         is slow.
@@ -190,7 +120,7 @@ public:
      *  The signature may look scary, but usage is simple:
      *
      *  \code{.cpp}
-     *  TensorWrapper<3,T> tensor;//Assume this initialized already
+     *  TensorWrapper<3,T> tensor;//Assume this is initialized already
      *  tensor(0,3,6);//<-Usage.  Returns the element at index {0,3,6}
      *  \endcode
      *
@@ -208,19 +138,6 @@ public:
         static_assert(sizeof...(args)==R-1, "Number of indices != rank");
         return (*this)(index_t{elem1,args...});
     }
-
-
-    /** \brief Returns an operation that can grab a slice of the current tensor.
-     *
-     *
-     *
-     */
-    auto slice(const index_t& start,const index_t& end)const->
-        decltype(detail_::make_op<R,T,detail_::SliceOp<R,T>>(de_ref(),start,end))
-    {
-        return detail_::make_op<R,T,detail_::SliceOp<R,T>>(de_ref(),start,end);
-    }
-
 
     /** \brief Together with set_memory allows reading and writing to the local
      *         elements of the tensor
@@ -254,31 +171,37 @@ public:
 
     virtual void set_memory(const MemoryBlock<R,T>& other)=0;
 
+
+    /** \brief Starts the lazy evaluation chain when first operation is addition
+     *
+     *
+     */
     template<typename RHS_t>
-    auto operator+(RHS_t&& lhs)const->
-    decltype(de_ref()+(std::forward<RHS_t>(lhs)))
+    auto operator+(const RHS_t& rhs)const
     {
-        return de_ref()+std::forward<RHS_t>(lhs);
+        return de_ref_op(tensor_)+rhs;
     }
 
     template<typename RHS_t>
-    auto operator-(RHS_t&& rhs)const->
-        decltype(de_ref()-std::forward<RHS_t>(rhs))
+    auto operator-(const RHS_t& rhs)const
     {
-        return de_ref()-std::forward<RHS_t>(rhs);
+        return de_ref_op(tensor_)-rhs;
     }
 
-    auto operator*(T&& value)const->decltype(de_ref()*std::forward<T>(value))
+    auto operator*(T rhs)const
     {
-        return de_ref()*std::forward<T>(value);
+        return de_ref_op(tensor_)*rhs;
     }
 
-//    ///API for contraction
-//    template<size_t N> constexpr
-//    IndexedTensor<Rank,wrapped_t> operator()(const char(&idx)[N])const
-//    {
-//        return IndexedTensor<Rank,wrapped_t>(tensor_,idx);
-//    }
+
+    ///API for contraction
+    template<char...Chars,typename...Args>
+    constexpr auto operator()(const detail_::C_String<Chars...>&,Args...)const
+    {
+        return detail_::IndexedTensor<de_ref_op,
+                detail_::make_indices<detail_::C_String<Chars...>,Args...>>
+                (de_ref_op(tensor_));
+    }
 };
 
 template<size_t R, typename T>
@@ -299,13 +222,36 @@ template class TensorWrapperBase<1,double>;
 template class TensorWrapperBase<2,double>;
 template class TensorWrapperBase<3,double>;
 
+namespace detail_ {
+
+template<size_t R, typename T>
+struct Convert<TensorWrapperBase<R,T>> : public
+        OperationBase<Convert<TensorWrapperBase<R,T>>>
+{
+    using scalar_type=T;
+    constexpr static size_t rank=R;
+
+    const TWrapper::detail_::TensorPtr<R,T>& data_;
+    Convert(const TensorWrapperBase<R,T>& data):
+        data_(data.tensor_)
+    {}
+
+    template<TensorTypes TT>
+    auto eval()const->decltype(data_.template cast<TT>())
+    {
+        return data_.template cast<TT>();
+    }
+};
+}
+
+
+
 }//End namespace
 
 template<typename T, size_t R>
-auto operator*(T&& value, const TWrapper::TensorWrapperBase<R,T>& t)->
-  decltype(t*std::forward<T>(value))
+auto operator*(T value, const TWrapper::TensorWrapperBase<R,T>& t)
 {
-    return t*std::forward<T>(value);
+    return t*value;
 }
 
 

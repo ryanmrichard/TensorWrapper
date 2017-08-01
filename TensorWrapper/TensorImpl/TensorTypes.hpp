@@ -1,4 +1,6 @@
 #pragma once
+#include <utility>
+#include <stdexcept>
 
 namespace TWrapper {
 namespace detail_{

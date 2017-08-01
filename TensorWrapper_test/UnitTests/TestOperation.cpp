@@ -1,8 +1,5 @@
-#include <TensorWrapper/Operation.hpp>
-#include <TensorWrapper/OperationImpls.hpp>
-#include <TensorWrapper/TensorPtr.hpp>
+#include <TensorWrapper/Operations.hpp>
 #include <Eigen/Dense>
-
 #include "TestHelpers.hpp"
 #include <vector>
 
@@ -11,6 +8,43 @@
  *
  *
  */
+
+
+
+
+namespace TWrapper {
+namespace detail_ {
+
+/* In general Eigen::MatrixXd should be wrapped in a TensorWrapper, but for
+ * the purposes of this test we want to bypass testing TensorWrapper.  Thus
+ * for this test only we specialize Convert so that it knows about Eigen's
+ * matrix class.
+ */
+template<>
+struct Convert<Eigen::MatrixXd> :
+        public OperationBase<Convert<Eigen::MatrixXd>>
+{
+   using scalar_type=double;
+   constexpr static size_t rank=2;
+   const Eigen::MatrixXd& tensor_;
+
+   constexpr Convert(const Eigen::MatrixXd& tensor):
+       tensor_(tensor)
+   {}
+
+   template<TensorTypes>
+   constexpr const Eigen::MatrixXd& eval()const
+   {
+       return tensor_;
+   }
+
+};
+
+}
+}
+
+
+
 using namespace TWrapper;
 using namespace detail_;
 
@@ -21,41 +55,51 @@ int main()
     Tester tester("Testing Operation class");
 
     constexpr TensorTypes type=TensorTypes::EigenMatrix;
-    Eigen::MatrixXd value=Eigen::MatrixXd::Zero(10,10);
-    pTensor my_tensor(type,value);
-    const pTensor& const_mytensor=const_cast<const pTensor&>(my_tensor);
-    auto& actual_tensor=my_tensor.cast<type>();
+    Eigen::MatrixXd value=Eigen::MatrixXd::Random(10,10);
+    Eigen::MatrixXd valuex2=value+value;
+    Eigen::MatrixXd valuex32=value*3.2;
 
-    //Dereference Op
-    using DeRef_t=DeRef<2,double>;
-    auto deref_op=make_op<2,double,DeRef_t>(my_tensor);
-    auto& deref_result=deref_op.template eval<type>();
-    tester.test("Deref result",deref_result==value);
-    tester.test("Not a copy",&deref_result==&actual_tensor);
+    //Convert Op (use Eigen::Matrix3d to test the primary template)
+    Eigen::Vector3d value2;
+    Convert<Eigen::Vector3d> convert(value2);
+    Convert<const Eigen::Vector3d> cconvert(value2);
+    auto& held_value=convert.eval<type>();
+    tester.test("Convert eval",&held_value==&value2);
+    const auto& cheld_value=cconvert.eval<type>();
+    tester.test("const Convert eval",&cheld_value==&value2);
 
-    auto cderef_op=make_op<2,double,DeRef_t>(const_mytensor);
-    auto& cderef_op_result=cderef_op.template eval<type>();
-    tester.test("Const Deref result",cderef_op_result==value);
-    tester.test("Const Not a copy",&cderef_op_result==&actual_tensor);
+    //TODO: test when a conversion actually happens
 
-    //Dimensions Op
-    using DimOp=DimsOp<2,double>;
-    Shape<2> right({10,10},false);
-    auto dim_op=make_op<2,double,DimOp>(value);
-    auto dim_op_result=dim_op.template eval<type>();
-    tester.test("Dimensions Op",dim_op_result==right);
+    //AddOp
+    Convert<Eigen::MatrixXd> mat(value);
+    AddOp<Convert<Eigen::MatrixXd>,Convert<Eigen::MatrixXd>> add = mat + mat;
+    Eigen::MatrixXd result=add.eval<type>();
+    tester.test("Add eval",result==valuex2);
 
-    //Add Op
-    using Add=AddOp<2,double>;
-    auto add_op=make_op<2,double,Add>(value,value);
-    auto add_result=add_op.template eval<type>();
-    tester.test("Addition",add_result==(value+value));
+    //ScaleOp
+    auto scale=mat*3.2;
+    Eigen::MatrixXd result2=scale.eval<type>();
+    tester.test("Scale eval",result2==valuex32);
 
-    //Equal
-    using Equal=EqualOp<2,double>;
-    auto equal_op=make_op<2,double,Equal>(value,value);
-    auto equal_result=equal_op.template eval<type>();
-    tester.test("Equal",equal_result=(value==value));
+    //SubtractionOp
+    auto sub=add-mat;
+    Eigen::MatrixXd result3=sub.eval<type>();
+    tester.test("Subtraction",result3==value);
+
+    //IndexedTensor
+    auto i=make_index("i");
+    auto j=make_index("j");
+    using Index_t=Indices<decltype(i),decltype(j)>;
+
+    IndexedTensor<Convert<Eigen::MatrixXd>,Index_t> indices(mat);
+    tester.test("Indexed Tensor eval",&(indices.eval<type>())==&value);
+
+    //Contraction
+    auto contraction=indices*indices;
+    double result4=contraction.eval<type>();
+    double corr4=value.cwiseProduct(value).sum();
+    tester.test("Idx1*Idx1",result4==corr4);
+
 
     return tester.results();
 }

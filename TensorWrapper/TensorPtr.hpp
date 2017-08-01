@@ -1,8 +1,7 @@
 #pragma once
 #include <utility>
 #include <memory>
-#include "TensorWrapper/TensorImpl/TensorTypes.hpp"
-#include "TensorWrapper/TensorImpls.hpp"
+#include "TensorWrapper/Operations.hpp"
 namespace TWrapper {
 namespace detail_ {
 
@@ -25,10 +24,18 @@ private:
     struct Convert{
         template<TensorTypes T2>
         TensorPtr<R,T> eval(const TensorPtr& ptr)
-        {
-            const auto& t=ptr.template cast<T2>();
-            return TensorPtr<R,T>(T1,
-                 std::move(TensorConverter<R,T,T1,T2>::convert(t)));
+        {              
+            const auto& temp=ptr.template cast<T2>();
+            TensorWrapperImpl<R,T,T1> impl;
+            TensorWrapperImpl<R,T,T2> impl2;
+
+            /* TODO: remove const_cast when MemoryBlock is made into an iterator
+             */
+
+            auto& t=const_cast<typename TensorWrapperImpl<R,T,T2>::type&>(temp);
+            auto rv=impl.allocate(impl2.dims(t).dims());
+            impl.set_memory(rv,impl2.get_memory(t));
+            return TensorPtr<R,T>(T1,std::move(rv));
         }
 
     };
@@ -121,10 +128,21 @@ public:
      *  depending on the type of \p tensor) throws.
      */
     template<typename Tensor_t>
+    explicit TensorPtr(TensorTypes T1,const Tensor_t& tensor):
+        tensor_(std::make_unique<Wrapper<Tensor_t>>(tensor)),
+        type_(T1)
+    {}
+
+    /** \brief Makes a TensorPtr from a backend's instance.
+     *
+     */
+    template<typename Tensor_t,
+             typename =typename std::enable_if<
+                          std::is_rvalue_reference<Tensor_t&&>::value
+                       >::type
+             >
     explicit TensorPtr(TensorTypes T1,Tensor_t&& tensor):
-        tensor_(std::make_unique<
-                    Wrapper<typename std::remove_reference<Tensor_t>::type>
-                >(std::forward<Tensor_t>(tensor))),
+        tensor_(std::make_unique<Wrapper<Tensor_t>>(std::move(tensor))),
         type_(T1)
     {}
 
@@ -144,7 +162,7 @@ public:
      */
     TensorPtr& operator=(const TensorPtr& other)
     {
-        tensor_=std::move(TensorPtr(other).tensor_);
+        tensor_=std::move(other.tensor_->clone());
         type_=other.type_;
         return *this;
     }
@@ -232,5 +250,31 @@ public:
         return static_cast<bool>(tensor_);
     }
 };
+
+/* Explicit instantiation of common use cases */
+template class TensorPtr<1,double>;
+template class TensorPtr<2,double>;
+template class TensorPtr<3,double>;
+
+template<size_t R, typename T>
+struct Convert<TensorPtr<R,T>> : public OperationBase<Convert<TensorPtr<R,T>>>
+{
+
+    const TensorPtr<R,T>& data_;
+
+    Convert(const TensorPtr<R,T>& data):
+        data_(data)
+    {}
+
+    constexpr static size_t rank=R;
+    using scalar_type=T;
+
+    template<TensorTypes TT>
+    const typename TensorWrapperImpl<R,T,TT>::type& eval()const
+    {
+        return data_.template cast<TT>();
+    }
+};
+
 
 }}//End namespaces
