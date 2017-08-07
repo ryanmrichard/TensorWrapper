@@ -3,18 +3,49 @@ project(TensorWrapper-superbuild CXX)
 include(ExternalProject)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(cmake/cmake_macros.cmake)
-find_package(Eigen3 REQUIRED)
 
 ############################
 # Options
 ############################
 
-#Enable Global Arrays backend?
-option_w_default(ENABLE_GA FALSE)
 #Should we build the stress tests?
 option_w_default(ENABLE_STRESS_TESTS FALSE)
 #Debug or Release build?
 option_w_default(CMAKE_BUILD_TYPE "Release")
+
+################################################################################
+# BLAS / LAPACK
+################################################################################
+
+find_package(CBLASLAPACKE REQUIRED)
+
+################################################################################
+# Backends
+#
+# Each backend has a file in external that corresponds to obtaining the source,
+# configuring it, and compiling it (if applicable).  Each backend will then be
+# found using the normal find_package methodology where they are expected to
+# create a target with their name as listed in the XXX variable below.
+#
+################################################################################
+
+
+#Enable Eigen backend?
+#Warning: things probably won't work if you disable this one
+option_w_default(ENABLE_Eigen3 TRUE)
+#Enable Global Arrays backend?
+option_w_default(ENABLE_GAXX FALSE)
+
+#List of all backends we know about.  Add new ones here.
+set(XXX "Eigen3" "GAXX")
+
+#BACKENDS is the a sublist of XXX that is only the ones that are turned on.
+foreach(x ${XXX})
+    if(${ENABLE_${x}})
+        set(BACKENDS ${BACKENDS} ${x})
+        message(STATUS "${x} backend is enabled.")
+    endif()
+endforeach()
 
 ##################################################
 # Where stuff will be installed. This is passed
@@ -32,32 +63,28 @@ list(APPEND CMAKE_PREFIX_PATH ${STAGE_INSTALL_PREFIX})
 
 add_subdirectory(external)
 
-message(STATUS "Enabled external features:  ${EXTERNAL_FEATURES}" )
-message(STATUS "External defines: ${EXTERNAL_DEFINES}")
 #####################################################
 #  Main Build
 #####################################################
 
-add_extra_arg(TWRAPPER_EXTRA_ARGS EXTERNAL_LIBRARIES)
-add_extra_arg(TWRAPPER_EXTRA_ARGS EXTERNAL_INCLUDE_DIR)
 ExternalProject_Add(TensorWrapper
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/TensorWrapper
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
                -DTWRAPPER_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
-               ${TWRAPPER_EXTRA_ARGS}
     BUILD_ALWAYS 1
     INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install DESTDIR=${STAGE_DIR}
     CMAKE_CACHE_ARGS -DCMAKE_PREFIX_PATH:LIST=${CMAKE_PREFIX_PATH}
                      -DCMAKE_INSTALL_RPATH:LIST=${CMAKE_INSTALL_RPATH}
                      -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
                      -DCMAKE_MODULE_PATH:LIST=${CMAKE_MODULE_PATH}
-                     -DEXTERNAL_FEATURES:LIST=${EXTERNAL_FEATURES}
-                     -DEXTERNAL_DEFINES:STRING=${EXTERNAL_DEFINES}
+                     -DBACKENDS:LIST=${BACKENDS}
 )
 
-add_dependencies(TensorWrapper GlobalArrays_external)
+foreach(x ${BACKENDS})
+    add_dependencies(TensorWrapper ${x}_external)
+endforeach()
 
 ###############################
 # Tests

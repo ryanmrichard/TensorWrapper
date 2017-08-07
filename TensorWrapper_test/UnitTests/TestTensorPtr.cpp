@@ -10,10 +10,10 @@ int main()
     constexpr auto type=detail_::TensorTypes::EigenMatrix;
     Eigen::MatrixXd value=Eigen::MatrixXd::Zero(10,10);
     tensor_ptr defaulted;
-    tester.test("Implicit default",!defaulted);
+    tester.test("Default constructor",!defaulted);
 
     tensor_ptr take_copy(type,value);
-    tester.test("Implicit copy",take_copy);
+    tester.test("Copy Backend constructor",take_copy);
     tester.test("type",take_copy.type()==type);
     auto& wrapped_value=take_copy.cast<type>();
     tester.test("Take by value",wrapped_value==value);

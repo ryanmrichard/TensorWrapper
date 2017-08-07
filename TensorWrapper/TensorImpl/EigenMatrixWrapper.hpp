@@ -2,39 +2,9 @@
 #include <eigen3/Eigen/Dense>
 #include <eigen3/unsupported/Eigen/CXX11/Tensor>
 #include <map>
+#include "TensorWrapper/TensorImpl/ContractionHelper.hpp"
 namespace TWrapper {
 namespace detail_ {
-
-template<size_t NFree, size_t NDummy, bool rows_same, bool cols_same>
-struct ContractionHelper{};
-
-#define CHelperSpecial(NFree,NDummy,ltranspose,rtranspose,guts)\
-template<>\
-struct ContractionHelper<NFree,NDummy,ltranspose,rtranspose>{\
-template<typename LHS_t,typename RHS_t>\
-auto contract(const LHS_t& lhs, const RHS_t& rhs){\
-   return guts;\
-}}
-
-//i,j * i,j or j,i * j,i
-CHelperSpecial(0,2,false,false,lhs.cwiseProduct(rhs).sum());
-//i,j * j,i or j,i * i,j
-CHelperSpecial(0,2,false,true,lhs.cwiseProduct(rhs.transpose()).sum());
-//i,j * k,j
-CHelperSpecial(1,1,false,true,lhs*rhs.transpose());
-//j,i * j,k
-CHelperSpecial(1,1,true,false,lhs.transpose()*rhs);
-//i,j * j,k
-CHelperSpecial(1,1,false,false,lhs*rhs);
-//j,i * k,j
-CHelperSpecial(1,1,true,true,lhs.transpose()*rhs.transpose());
-//i * i
-CHelperSpecial(0,1,false,false,lhs.dot(rhs));
-//i * j or j*i
-CHelperSpecial(1,0,false,true,lhs*rhs.transpose());
-
-#undef CHelperSpecial
-
 
 template<size_t R, typename T, typename Tensor_t>
 struct MemoryGetterHelper
@@ -135,21 +105,15 @@ struct TensorWrapperImpl<2,T,TensorTypes::EigenMatrix> {
     auto contraction(const LHS_t& lhs, const RHS_t& rhs,
                      const LHS_Idx,const RHS_Idx&)const
     {
-        constexpr bool rows_same=
-                (LHS_Idx::template get<0>()==RHS_Idx::template get<0>());
-        constexpr bool cols_same=
-                (LHS_Idx::template get<1>()==RHS_Idx::template get<1>());
-        constexpr bool rowcol=
-                (LHS_Idx::template get<0>()==RHS_Idx::template get<1>());
-        constexpr bool all_same=(rows_same && cols_same);
-
-        constexpr bool transpose1=(rows_same || rowcol) && !all_same;
-        constexpr bool transpose2=(cols_same || rowcol) && !all_same;
-
-        constexpr size_t nfree=LHS_Idx::nunique(RHS_Idx());
-        constexpr size_t ndummy=LHS_Idx::ncommon(RHS_Idx());
-        return ContractionHelper<nfree,ndummy,transpose1,transpose2>().
-                contract(lhs,rhs);
+        constexpr bool isvec=RHS_Idx::size()==1;
+        constexpr bool rrow=RHS_t::RowsAtCompileTime==1;
+        using contract=ContractionTraits<LHS_Idx,RHS_Idx,2,RHS_Idx::size()>;
+        constexpr bool rtranspose=(!isvec?contract::rtranspose:
+                                          contract::rtranspose!=rrow);
+        return ContractionHelper<contract::nfree,
+                                 contract::ndummy,
+                                 contract::ltranspose,
+                                 rtranspose>().contract(lhs,rhs);
     }
 
     template<typename My_t>
@@ -229,14 +193,88 @@ struct TensorWrapperImpl<1,T,TensorTypes::EigenMatrix> {
     auto contraction(const LHS_t& lhs, const RHS_t& rhs,
                      const LHS_Idx&,const RHS_Idx&)const
     {
-        constexpr bool transpose=
-                (LHS_Idx::template get<0>()!=RHS_Idx::template get<0>());
-        constexpr size_t nfree=LHS_Idx::nunique(RHS_Idx());
-        constexpr size_t ndummy=LHS_Idx::ncommon(RHS_Idx());
-        return ContractionHelper<nfree,ndummy,false,transpose>().
-                contract(lhs,rhs);
+        constexpr bool lrow=LHS_t::RowsAtCompileTime==1;
+        constexpr bool is_vec=(RHS_Idx::size()==1);
+        constexpr bool rrow=RHS_t::RowsAtCompileTime==1;
+        using contract=ContractionTraits<LHS_Idx,RHS_Idx,1,RHS_Idx::size()>;
+        constexpr bool rtranspose=(!is_vec?contract::rtranspose:
+                                           rrow!=contract::rtranspose);
+        return ContractionHelper<contract::nfree,
+                                 contract::ndummy,
+                                 contract::ltranspose!=lrow,
+                                 rtranspose>().contract(lhs,rhs);
     }
 };
 
+//Scalar specialization
+template<typename T>
+struct TensorWrapperImpl<0,T,TensorTypes::EigenMatrix> {
+
+    using array_t=std::array<size_t,0>;
+
+    using type=Eigen::Matrix<T,1,1>;
+
+    template<typename Tensor_t>
+    Shape<0> dims(const Tensor_t& impl)const{
+        return Shape<0>(array_t{},impl.IsRowMajor);
+    }
+
+    template<typename Tensor_t>
+    auto get_memory(Tensor_t& impl)const{
+        return MemoryBlock<0,T>(dims(impl),dims(impl).dims(),
+                [&](const array_t&)->T&{return impl.data()[0];});
+    }
+
+    template<typename Tensor_t>
+    void set_memory(Tensor_t& impl,const MemoryBlock<0,T>& block)const
+    {
+        impl.data()[0]=block(array_t{});
+    }
+
+    type allocate(const array_t&)const{
+        return type{};
+    }
+
+    template<typename Tensor_t>
+    auto slice(const Tensor_t& impl,
+               const array_t&,
+               const array_t&)const{
+        return impl;
+    }
+
+    ///Returns true if two tensors are equal
+    template<typename LHS_t, typename RHS_t>
+    bool are_equal(LHS_t&& lhs, RHS_t&& rhs)const
+    {
+        return lhs == rhs;
+    }
+
+    template<typename Tensor_t>
+    auto scale(Tensor_t&& lhs,double val)const
+    {
+        return lhs*val;
+    }
+
+    ///Adds to the tensor
+    template<typename LHS_t,typename RHS_t>
+    auto add(LHS_t&& lhs,RHS_t&& rhs)const
+    {
+        return lhs+rhs;
+    }
+
+    ///Subtracts from the tensor
+    template<typename LHS_t,typename RHS_t>
+    auto subtract(const LHS_t& lhs,const RHS_t&rhs)const
+    {
+        return lhs-rhs;
+    }
+
+    template<typename LHS_t,typename RHS_t,typename LHS_Idx,typename RHS_Idx>
+    auto contraction(const LHS_t& lhs, const RHS_t& rhs,
+                     const LHS_Idx&,const RHS_Idx&)const
+    {
+        return lhs*rhs;
+    }
+};
 
 }}//End namespaces

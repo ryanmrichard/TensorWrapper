@@ -89,9 +89,12 @@ int main()
     //IndexedTensor
     auto i=make_index("i");
     auto j=make_index("j");
+    auto k=make_index("k");
+    auto l=make_index("l");
     using Index_t=Indices<decltype(i),decltype(j)>;
-
-    IndexedTensor<Convert<Eigen::MatrixXd>,Index_t> indices(mat);
+    using Index_t2=Indices<decltype(j),decltype(k)>;
+    using Index_t3=Indices<decltype(k),decltype(l)>;
+    IndexedTensor<double,Convert<Eigen::MatrixXd>,Index_t> indices(mat);
     tester.test("Indexed Tensor eval",&(indices.eval<type>())==&value);
 
     //Contraction
@@ -100,6 +103,14 @@ int main()
     double corr4=value.cwiseProduct(value).sum();
     tester.test("Idx1*Idx1",result4==corr4);
 
+
+    //Nested Contraction
+    IndexedTensor<double,Convert<Eigen::MatrixXd>,Index_t2> indices2(mat);
+    IndexedTensor<double,Convert<Eigen::MatrixXd>,Index_t3> indices3(mat);
+    Eigen::MatrixXd corr5=value*value*value;
+    auto contraction2=indices*indices2*indices3;
+    Eigen::MatrixXd result5=contraction2.eval<type>();
+    tester.test("Idx1*Idx2*Idx3",result5==corr5);
 
     return tester.results();
 }

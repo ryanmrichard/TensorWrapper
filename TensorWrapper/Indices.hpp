@@ -6,14 +6,14 @@
 /** \file Contains the classes and free functions for performing compile-time
  *  parsing of string indices.
  *
- *  We assume that every index to be summed over occurs at most twice in a
- *  term.  This ensures all products can be performed pairwise (I think that
- *  this must be the case in general, and that it follows from the associative
- *  property of the tensor product, but I'm admittedly not sure if that is a
- *  proof...).  This still leaves two situations: the two indices occur on the
- *  smae tensor (like the trace of a matrix) or they occur on two different
- *  tensors in the term.  We leave it for the IndexedTensor class to take
- *  care of the dispatching of these two cases.
+ *  Throughout TensorWrapper we assume that every index to be summed over
+ *  occurs at most twice in a term.  This ensures all products can be performed
+ *  pairwise (I think that this must be the case in general, and that it follows
+ *  from the associative property of the tensor product, but I'm admittedly not
+ *  sure if that is a  proof...).  This still leaves two situations: the two
+ *  indices occur on the smae tensor (like the trace of a matrix) or they occur
+ *  on two different tensors in the term.  We leave it for the IndexedTensor
+ *  class to take care of the dispatching of these two cases.
  * 
  *  It is perhaps also worth clarifying what assuming an index only occurs twice
  *  actually entails for this machinery.  Basically it boils down to the
@@ -93,15 +93,17 @@ auto build_string(std::index_sequence<I...>) {
                 std::make_index_sequence<sizeof(str)>());\
 }()
 
-template<size_t...hvs>
-class TempIndices{};
+
+
 
 /** \brief A class to hold the various indices associated with a tensor.
  *
  *  This class is designed to be used at compile-time.  Ultimately it is pure
  *  template meta-programming with a pretty face thanks to C++11's constexpr.
  *
- *  If this class gets too slow try writing in terms of hashes.
+ *  If this class gets too slow try writing in terms of hashes.  I started
+ *  making a slimmed down version of this file in Indices2.hpp that uses
+ *  hashes.
  *
  *  \TODO: there's alot of private recursion going on that is pretty similar.
  *  It should be possible to consolidate into the get_common/get_unique
@@ -453,6 +455,18 @@ public:
         return get_unique_impl(other,std::make_index_sequence<unq>());
     }
 
+    template<size_t i,typename...Args2>
+    constexpr static bool
+    is_unique(const Indices<Args2...>& other)noexcept
+    {
+        constexpr auto unique=get_unique(Indices<Args2...>{});
+        constexpr size_t nunq=nunique(Indices<Args2...>{});
+        for(size_t j=0;j<nunq;++j)
+            if(unique[j]==i)
+                return true;
+        return false;
+    }
+
 
     /** \brief Returns the position of the \p cnt -th occurence of index
      *  \p other in this set.
@@ -474,10 +488,66 @@ public:
 
 };
 
-
 template<typename...OtherIndxs>
 using make_indices=Indices<OtherIndxs...>;
 
+template<typename LHS_t, typename RHS_t>
+struct MakeUnion{};
+
+template<typename LHS_t, typename...Args>
+struct MakeUnion<LHS_t,Indices<Args...>>
+{
+    using type=Indices<LHS_t,Args...>;
+};
+
+
+template<size_t Idx, bool Lgood, bool Rgood, size_t LMax, size_t RMax,
+         typename LHS_t, typename RHS_t>
+struct FreeIndicesImpl;
+
+template<size_t LMax, size_t RMax,typename LHS_t, typename RHS_t>
+struct FreeIndicesImpl<RMax,false,false,LMax,RMax,LHS_t,RHS_t>
+{
+    using type=Indices<>;
+};
+
+template<size_t Idx, size_t LMax, size_t RMax, typename LHS_t, typename RHS_t>
+struct FreeIndicesImpl<Idx,false,true,LMax,RMax,LHS_t,RHS_t> : public
+        FreeIndicesImpl<Idx+1,false,Idx+1!=RMax,LMax,RMax,LHS_t,RHS_t>
+{
+    constexpr static bool is_unique=RHS_t::template is_unique<Idx>(LHS_t{});
+    constexpr static bool rgood=Idx+1!=RMax;
+    using base_type=typename
+        FreeIndicesImpl<Idx+1,false,Idx+1!=RMax,LMax,RMax,LHS_t,RHS_t>::type;
+    using Idx_t=decltype(RHS_t::template get<Idx>());
+    using unique_type=typename MakeUnion<Idx_t,base_type>::type;
+    using type=typename std::conditional<is_unique,unique_type,base_type>::type;
+};
+
+template<size_t Idx, size_t LMax, size_t RMax,typename LHS_t, typename RHS_t>
+struct FreeIndicesImpl<Idx,true,true,LMax, RMax,LHS_t,RHS_t> : public
+     FreeIndicesImpl<Idx+1!=LMax?Idx+1:0,Idx+1!=LMax,true,LMax,RMax,LHS_t,RHS_t>
+{
+    constexpr static bool is_unique=LHS_t::template is_unique<Idx>(RHS_t{});
+    constexpr static bool lgood=Idx+1!=LMax;
+    constexpr static bool rgood=0!=RMax;
+    using base_type=typename
+        FreeIndicesImpl<lgood?Idx+1:0,lgood,true,LMax,RMax,LHS_t,RHS_t>::type;
+    using Idx_t=decltype(LHS_t::template get<Idx>());
+    using unique_type=typename MakeUnion<Idx_t,base_type>::type;
+    using type=typename std::conditional<is_unique,unique_type,base_type>::type;
+};
+
+template<typename LHS_t, typename RHS_t>
+struct FreeIndices
+{
+    constexpr static size_t LMax=LHS_t::size();
+    constexpr static size_t RMax=RHS_t::size();
+    constexpr static bool lgood=0!=LMax;
+    constexpr static bool rgood=0!=RMax;
+    using type=
+        typename FreeIndicesImpl<0,lgood,rgood,LMax,RMax,LHS_t,RHS_t>::type;
+};
 
 template<typename LHS_t, typename RHS_t, size_t...NLHS,size_t...NRHS>
 constexpr std::pair<std::array<size_t,sizeof...(NLHS)>,

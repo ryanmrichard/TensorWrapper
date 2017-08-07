@@ -7,13 +7,13 @@ namespace detail_ {
 /** \brief This is basically a slightly dressed Convert class.
  *
  */
-template<typename Tensor_t,typename Index_t>
-struct IndexedTensor: public OperationBase<IndexedTensor<Tensor_t,Index_t>>
+template<typename T, typename Tensor_t,typename Index_t>
+struct IndexedTensor: public OperationBase<IndexedTensor<T,Tensor_t,Index_t>>
 {
     Tensor_t tensor_;
     using indices=Index_t;
-    constexpr static size_t rank=Tensor_t::rank;
-    using scalar_type=typename Tensor_t::scalar_type;
+    constexpr static size_t rank=Index_t::size();
+    using scalar_type=T;
 
     constexpr IndexedTensor(const Tensor_t& tensor)
         :tensor_(tensor)

@@ -257,7 +257,8 @@ template class TensorPtr<2,double>;
 template class TensorPtr<3,double>;
 
 template<size_t R, typename T>
-struct Convert<TensorPtr<R,T>> : public OperationBase<Convert<TensorPtr<R,T>>>
+struct Convert<TensorPtr<R,T>> :
+        public OperationBase<Convert<TensorPtr<R,T>>>
 {
 
     const TensorPtr<R,T>& data_;

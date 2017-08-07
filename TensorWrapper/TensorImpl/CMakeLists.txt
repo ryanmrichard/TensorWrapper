@@ -1,5 +1,0 @@
-if(${ENABLE_GlobalArrays})
-   enable_language(Fortran)
-   set(TensorImpl_SRC GA_CXX/GATensorImpl.cpp dummy.F PARENT_SCOPE)
-   set(TensorImpl_DEFs ENABLE_GA)
-endif()

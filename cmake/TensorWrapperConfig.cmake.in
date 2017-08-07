@@ -1,45 +1,55 @@
 #Get the root of the install (this is done on an installed copy)
-# This file is installed int root/share/cmake/TensorWrapper
+# This file is installed in root/share/cmake/TensorWrapper
 set(TW_PREFIX "${CMAKE_CURRENT_LIST_DIR}") #in TensorWrapper/
 get_filename_component(TW_PREFIX "${TW_PREFIX}" DIRECTORY) # in cmake/
 get_filename_component(TW_PREFIX "${TW_PREFIX}" DIRECTORY) # in share/
 get_filename_component(TW_PREFIX "${TW_PREFIX}" DIRECTORY) # in root/
 
-#Find external dependencies
-find_package(Eigen3 REQUIRED)
-message(STATUS "Eigen3 includes: ${EIGEN3_INCLUDE_DIRS}")
-foreach(pkg @EXTERNAL_FEATURES@)
-    find_package(${pkg} REQUIRED)
-    message(STATUS "${pkg} libraries: ${${pkg}_LIBRARIES}")
-    message(STATUS "${pkg} includes: ${${pkg}_INCLUDE_DIRS}")
-    list(APPEND EXTERNAL_INCLUDE_DIRS ${${pkg}_INCLUDE_DIRS})
-    list(APPEND EXTERNAL_LIBRARIES ${${pkg}_LIBRARIES})
-    set(ENABLE_${pkg} TRUE)
-endforeach()
-#These packages require MPI
-if(${ENABLE_GlobalArrays})
-   find_package(MPI)
-   list(APPEND EXTERNAL_INCLUDE_DIRS ${MPI_INCLUDE_DIRS})
-   list(APPEND EXTERNAL_LIBRARIES ${MPI_LIBRARIES})
-endif()
-#GA requires Fortran and makes us have an actual library
-if(${ENABLE_GlobalArrays})
-    set(TensorWrapper_LIBRARY ${TW_PREFIX}/lib/libTensorWrapper.a)
-    list(APPEND EXTERNAL_LIBRARIES @Fortran_EXTERNAL_LIBRARIES@)
-endif()
-
-
-set(TensorWrapper_INCLUDE_DIR ${TW_PREFIX}/include)
-message(STATUS "TensorWrapper includes: ${TensorWrapper_INCLUDE_DIR}")
+#Main target of this library
 add_library(TensorWrapper INTERFACE)
-set(TensorWrapper_INCLUDE_DIRS ${TensorWrapper_INCLUDE_DIR}
-                               ${EIGEN3_INCLUDE_DIRS}
-                               ${EXTERNAL_INCLUDE_DIRS}
+set(TENSORWRAPPER_INCLUDE_DIR ${TW_PREFIX}/include)
+set(TENSORWRAPPER_INCLUDE_DIRS ${TENSORWRAPPER_INCLUDE_DIR})
+
+#The math libraries we were configured with
+set(CBLAS_LIBRARIES @CBLAS_LIBRARIES@)
+set(CBLAS_INCLUDE_DIR @CBLAS_INCLUDE_DIR@)
+set(CBLAS_INCLUDE_FILE @CBLAS_INCLUDE_FILE@)
+set(LAPACKE_LIBRARIES @LAPACKE_LIBRARIES@)
+set(LAPACKE_INCLUDE_DIR @LAPACKE_INCLUDE_DIR@)
+set(LAPACKE_INCLUDE_FILE @LAPACKE_INCLUDE_FILE@)
+
+#Find external dependencies
+foreach(pkg @BACKENDS@)
+    find_package(${pkg} REQUIRED)
+    STRING(TOUPPER ${pkg} PKG)
+    message(STATUS ${${PKG}_LIBRARIES})
+    message(STATUS ${${PKG}_DEFINITIONS})
+    message(STATUS ${${PKG}_INCLUDE_DIRS})
+    set(TENSORWRAPPER_DEFINITIONS ${TENSORWRAPPER_DEFINITIONS}
+                                          "-DENABLE_${pkg}"
+                                          "${${PKG}_DEFINITIONS}")
+    set(TENSORWRAPPER_LIBRARIES ${TENSORWRAPPER_LIBRARIES}
+                                     ${${PKG}_LIBRARIES})
+    set(TENSORWRAPPER_INCLUDE_DIRS ${TENSORWRAPPER_INCLUDE_DIRS}
+                                   ${${PKG}_INCLUDE_DIRS})
+endforeach()
+
+target_link_libraries(TensorWrapper INTERFACE ${TENSORWRAPPER_LIBRARIES}
+                                              ${CBLAS_LIBRARIES}
+                                              ${LAPACKE_LIBRARIES}
 )
-set(TensorWrapper_LIBRARIES    ${TensorWrapper_LIBRARY}
-                               ${EXTERNAL_LIBRARIES}
-)
-target_compile_definitions(TensorWrapper INTERFACE @EXTERNAL_DEFINES@)
 target_include_directories(TensorWrapper INTERFACE
-                                               "${TensorWrapper_INCLUDE_DIRS}")
-target_link_libraries(TensorWrapper INTERFACE "${TensorWrapper_LIBRARIES}")
+                                             ${TENSORWRAPPER_INCLUDE_DIRS}
+                                             ${CBLAS_INCLUDE_DIR}
+                                             ${LAPACKE_INCLUDE_DIR}
+)
+target_compile_definitions(TensorWrapper INTERFACE ${TENSORWRAPPER_DEFINITIONS}
+                                                   ${CBLAS_INCLUDE_FILE}
+                                                   ${LAPACKE_INCLUDE_FILE}
+)
+
+#Log what we found/are doing
+message(STATUS "TensorWrapper includes: ${TENSORWRAPPER_INCLUDE_DIRS}")
+message(STATUS "TensorWrapper libraries: ${TENSORWRAPPER_LIBRARIES}")
+message(STATUS "TensorWrapepr defintions: ${TENSORWRAPPER_DEFINITIONS}")
+

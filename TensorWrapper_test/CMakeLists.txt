@@ -4,9 +4,6 @@ find_package(TensorWrapper REQUIRED)
 include(CTest)
 enable_testing()
 
-
-
-
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_EXTENSIONS False)
 
@@ -19,6 +16,7 @@ endif()
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
 set(TEST_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 function(NEW_TEST test_name test_dir)
    add_executable(${test_name} ${test_name}.cpp)
    target_link_libraries(${test_name} PRIVATE TensorWrapper)

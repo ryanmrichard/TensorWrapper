@@ -125,13 +125,29 @@ int main()
     vector_type _vG=_vA-_vB-_vC;
     tester.test("Vector Subtraction",vG==_vG);
 
-//    double vH=vG.dot(vG);
-//    EigenScalar<double> _vH=_vG(i)*_vG(i);
-//    tester.test("Vector dot",vH==_vH(std::array<size_t,0>{}));
+    eigen_matrix vH=vG.transpose()*vG;
+    EigenScalar<double> _vH=_vG(i)*_vG(i);
+    tester.test("Vector dot",vH==_vH);
 
     eigen_matrix vI=vG*vG.transpose();
     matrix_type _vI=_vG(i)*_vG(j);
     tester.test("Vector outer product",_vI==vI);
+
+    eigen_vector vJ=vG.transpose()*G;
+    vector_type _vJ=_vG(i)*_G(i,j);
+    tester.test("Vector times matrix",vJ==_vJ);
+
+    eigen_vector vK=vG.transpose()*G.transpose();
+    vector_type  _vK=_vG(i)*_G(j,i);
+    tester.test("Vector times matrix^T",_vK==vK);
+
+    eigen_vector vL=G*vG;
+    vector_type _vL=_G(i,j)*_vG(j);
+    tester.test("Matrix times vector",vL==_vL);
+
+    eigen_vector vM=G.transpose()*vG;
+    vector_type _vM=_G(i,j)*_vG(i);
+    tester.test("Matrix^T times vector",vM==_vM);
 
     return tester.results();
 }

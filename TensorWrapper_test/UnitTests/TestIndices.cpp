@@ -237,6 +237,11 @@ int main()
      static_assert(are_equal(dummy32.first,com32),"Idx3 dummy Idx2[0]");
      static_assert(are_equal(dummy32.second,dum32),"Idx3 dummy Idx2[1]");
 
+     using Free12=typename FreeIndices<decltype(Idx1),decltype(Idx2)>::type;
+     static_assert(Free12::size()==2,"Free indices");
+     static_assert(Free12::get<0>()==i,"Free index1");
+     static_assert(Free12::get<1>()==l,"Free index2");
+
 
     return tester.results();
 }

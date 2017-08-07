@@ -198,9 +198,13 @@ public:
     template<char...Chars,typename...Args>
     constexpr auto operator()(const detail_::C_String<Chars...>&,Args...)const
     {
-        return detail_::IndexedTensor<de_ref_op,
-                detail_::make_indices<detail_::C_String<Chars...>,Args...>>
-                (de_ref_op(tensor_));
+        static_assert(sizeof...(Args)+1==R,"#indices != rank");
+        using Index_t=
+            detail_::make_indices<detail_::C_String<Chars...>,Args...>;
+
+        //constexpr auto counts=Index_t::get_counts();
+
+        return detail_::IndexedTensor<T,de_ref_op,Index_t>(de_ref_op(tensor_));
     }
 };
 

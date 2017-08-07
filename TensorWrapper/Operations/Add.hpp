@@ -32,4 +32,3 @@ struct AddOp: public OperationBase<AddOp<LHS_t,RHS_t>>{
 
 BINARY_OP(AddOp,+)
 UNARY_OP(AddOp,+)
-
