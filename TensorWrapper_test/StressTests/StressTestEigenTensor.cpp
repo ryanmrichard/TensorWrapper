@@ -4,7 +4,10 @@
 
 using namespace TWrapper;
 using namespace Eigen;
-using tensor_type=EigenMatrix<double>;
+using tensor_type=EigenTensor<2,double>;
+using idx_t=Eigen::IndexPair<int>;
+template<size_t n>
+using idx_array=std::array<idx_t,n>;
 
 void print_times(const std::string& msg, double eigen_time, double twtime)
 {
@@ -15,16 +18,18 @@ void print_times(const std::string& msg, double eigen_time, double twtime)
 
 int main(int argc, char** argv)
 {
-    Tester tester("Stress Testing Eigen Matrix Wrapping");
+    Tester tester("Stress Testing Eigen Tensor Wrapping");
     const size_t dim=argc>1?atoi(argv[1]):10000;
     const std::array<size_t,2> dims({dim,dim});
-    MatrixXd A=MatrixXd::Random(dim,dim),
-            B=MatrixXd::Random(dim,dim),
-            C=MatrixXd::Random(dim,dim);
-    tensor_type _A(A),_B(B),_C(C);
+    tensor_type _A(dims),_B(dims),_C(dims);
+    FillRandom(_A);
+    FillRandom(_B);
+    FillRandom(_C);
+
+    Tensor<double,2> A=_A.data(),B=_B.data(),C=_C.data();
 
     Timer timer;
-    MatrixXd D=A+B+C;
+    Tensor<double,2> D=A+B+C;
     double eigen_time=timer.get_time();
     timer.reset();
     tensor_type _D=_A+_B+_C;
@@ -42,7 +47,8 @@ int main(int argc, char** argv)
     tester.test("A-B-C",D==_D);
 
     timer.reset();
-    MatrixXd E=A*B*C;
+    D=A.contract(B,idx_array<1>{idx_t{1,0}});
+    Tensor<double,2>E=D.contract(C,idx_array<1>{idx_t{1,0}});
     eigen_time=timer.get_time();
     auto i=make_index("i");
     auto j=make_index("j");
@@ -50,20 +56,21 @@ int main(int argc, char** argv)
     auto l=make_index("l");
 
     timer.reset();
-    tensor_type _E=_A(i,k)*_B(k,l)*_C(l,j);
+    _D=_A(i,k)*_B(k,l)*_C(l,j);
     wrapper_time=timer.get_time();
     print_times("A*B*C",eigen_time,wrapper_time);
-    tester.test("A*B*C",_E==E);
+    tester.test("A*B*C",_D==E);
 
     timer.reset();
-    MatrixXd F=A.transpose()*B*C;
+    D=A.contract(B,idx_array<1>{idx_t{0,0}});
+    E=D.contract(C,idx_array<1>{idx_t{1,0}});
     eigen_time=timer.get_time();
 
     timer.reset();
-    tensor_type _F=_A(k,i)*_B(k,l)*_C(l,j);
+    _D=_A(k,i)*_B(k,l)*_C(l,j);
     wrapper_time=timer.get_time();
     print_times("A^T*B*C",eigen_time,wrapper_time);
-    tester.test("A^T*B*C",F==_F);
+    tester.test("A^T*B*C",E==_D);
 
     return tester.results();
 }

@@ -8,23 +8,27 @@ get_filename_component(TW_PREFIX "${TW_PREFIX}" DIRECTORY) # in root/
 #Main target of this library
 add_library(TensorWrapper INTERFACE)
 set(TENSORWRAPPER_INCLUDE_DIR ${TW_PREFIX}/include)
-set(TENSORWRAPPER_INCLUDE_DIRS ${TENSORWRAPPER_INCLUDE_DIR})
 
 #The math libraries we were configured with
 set(CBLAS_LIBRARIES @CBLAS_LIBRARIES@)
 set(CBLAS_INCLUDE_DIR @CBLAS_INCLUDE_DIR@)
-set(CBLAS_INCLUDE_FILE @CBLAS_INCLUDE_FILE@)
 set(LAPACKE_LIBRARIES @LAPACKE_LIBRARIES@)
 set(LAPACKE_INCLUDE_DIR @LAPACKE_INCLUDE_DIR@)
-set(LAPACKE_INCLUDE_FILE @LAPACKE_INCLUDE_FILE@)
+
+set(TENSORWRAPPER_INCLUDE_DIRS ${TENSORWRAPPER_INCLUDE_DIR}
+                               ${CBLAS_INCLUDE_DIR}
+                               ${LAPACKE_INCLUDE_DIR}
+)
+
+set(TENSORWRAPPER_LIBRARIES ${CBLAS_LIBRARIES}
+                            ${LAPACKE_LIBRARIES}
+)
+
 
 #Find external dependencies
 foreach(pkg @BACKENDS@)
     find_package(${pkg} REQUIRED)
     STRING(TOUPPER ${pkg} PKG)
-    message(STATUS ${${PKG}_LIBRARIES})
-    message(STATUS ${${PKG}_DEFINITIONS})
-    message(STATUS ${${PKG}_INCLUDE_DIRS})
     set(TENSORWRAPPER_DEFINITIONS ${TENSORWRAPPER_DEFINITIONS}
                                           "-DENABLE_${pkg}"
                                           "${${PKG}_DEFINITIONS}")
@@ -34,19 +38,12 @@ foreach(pkg @BACKENDS@)
                                    ${${PKG}_INCLUDE_DIRS})
 endforeach()
 
-target_link_libraries(TensorWrapper INTERFACE ${TENSORWRAPPER_LIBRARIES}
-                                              ${CBLAS_LIBRARIES}
-                                              ${LAPACKE_LIBRARIES}
-)
+
+
+target_link_libraries(TensorWrapper INTERFACE ${TENSORWRAPPER_LIBRARIES})
 target_include_directories(TensorWrapper INTERFACE
-                                             ${TENSORWRAPPER_INCLUDE_DIRS}
-                                             ${CBLAS_INCLUDE_DIR}
-                                             ${LAPACKE_INCLUDE_DIR}
-)
-target_compile_definitions(TensorWrapper INTERFACE ${TENSORWRAPPER_DEFINITIONS}
-                                                   ${CBLAS_INCLUDE_FILE}
-                                                   ${LAPACKE_INCLUDE_FILE}
-)
+                                                  ${TENSORWRAPPER_INCLUDE_DIRS})
+target_compile_definitions(TensorWrapper INTERFACE ${TENSORWRAPPER_DEFINITIONS})
 
 #Log what we found/are doing
 message(STATUS "TensorWrapper includes: ${TENSORWRAPPER_INCLUDE_DIRS}")

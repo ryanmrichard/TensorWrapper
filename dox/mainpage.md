@@ -1,5 +1,6 @@
-TensorWrapper                       {#mainpage}
+TensorWrapper {#mainpage}
 =============
 
-- [Building and Compiling](@ref Building)
-- [QuickStart](@ref QuickStart)
+[Configuring and Compiling](@ref Building)
+
+[QuickStart](@ref QuickStart)

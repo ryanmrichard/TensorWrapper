@@ -5,7 +5,7 @@ We have done our best to make the configuration and compilation of TensorWrapper
 as painless as possible.  This page contains our collective wisdom for when the
 standard process:
 
-~~~.sh
+~~~bash
 cmake -H. -Bbuild
 make
 make install
@@ -46,6 +46,20 @@ included in the following table along with a brief description of what they do.
 
 A general piece of advice, when working with CMake always pass full paths.
 
+TensorWrapper Options
+---------------------
+
+This table lists options that are passed to CMake in the same manner as other
+CMake variables, but are specific to TensorWrapper.
+
+--------------------------------------------------------------------------------
+| Option Name     |  Description                                               |
+| :-------------: | :----------------------------------------------------------|
+| ENABLE_STRESS_TESTS | Build test cases that may use significant amounts of memory? |
+| ENABLE_Eigen3   | Placeholder option for the moment as Eigen can't be disabled |
+| ENABLE_GAXX     | Builds TensorWrapper bindings to my GlobalArrays C++ API. |
+-------------------------------------------------------------------------------
+
 
 Math Libraries
 --------------
@@ -64,8 +78,33 @@ requires "modern" BLAS/LAPACK so-called CBLAS/LAPACKE respectively.
 | LAPACKE_INCLUDE_DIR | The path to the include directory for the LAPACKE header|
 -------------------------------------------------------------------------------
 
-If you are using MKL it is sufficient to simply set the LAPACKE versions of the
+:note: If you are using MKL it is sufficient to simply set the LAPACKE versions of the
 variables.  Whether you are using MKL or not will be detected based on whether
-or not `mkl.h` is found in the path that `LAPACKE_INCLUDE_DIR` is set to.
+or not `mkl.h` is found in the path that `LAPACKE_INCLUDE_DIR` is set to. The
+remaining variable, `LAPACKE_LIBRARIES`, should be set to whatever the [Intel
+link line advisor][ILLA] suggests for your system, with the spaces changed to
+semi-colons.  For example, to use OpenMP threaded MKL on a 64-bit Linux platform
+with GNU compilers and 32-bit integers Intel specifies the link line as (with
+line-breaks added for readability):
 
+~~~
+-Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_lp64.a
+                  ${MKLROOT}/lib/intel64/libmkl_gnu_thread.a
+                  ${MKLROOT}/lib/intel64/libmkl_core.a
+-Wl,--end-group
+-lgomp -lpthread -lm -ldl
+~~~
 
+this is passed to CMake like (using variables for readability):
+
+~~~bash
+MKL_LIBRARIES="-Wl,--start-group;${MKLROOT}/lib/intel64/libmkl_intel_lp64.a;"
+MKL_LIBRARIES+="${MKLROOT}/lib/intel64/libmkl_gnu_thread.a;"
+MKL_LIBRARIES+="${MKLROOT}/lib/intel64/libmkl_core.a;-Wl,--end-group;"
+MKL_LIBRARIES+="-lgomp;-lpthread;-lm;-ldl"
+
+cmake -DLAPACKE_LIBRARIES=${MKL_LIBRARIES}
+~~~
+
+<!--_ Links -->
+[ILLA]: https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor

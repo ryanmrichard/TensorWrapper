@@ -13,7 +13,7 @@ Declaring and Filling a Tensor
 
 Let's start by making a tensor.
 
-\code{.cpp}
+~~~cpp
 //This includes the TensorWrapper library
 #include<TensorWrapper/TensorWrapper.hpp>
 
@@ -39,7 +39,7 @@ int main()
 
     return 0;
 }//End main function
-\endcode
+~~~
 
 The code is useless in the sense that it doesn't do anything, but it does
 demonstrate the basics of making a tensor with the TensorWrapper library.  Note
@@ -73,7 +73,7 @@ After making and filling a tensor the next thing you'll likely want to do is
 use it.  The following demonstrates how to do basic operations with
 TensorWrapper:
 
-\code{.cpp}
+~~~cpp
 //We assume this code takes place inside a function
 
 //We assume you already initialized and filled these
@@ -91,6 +91,8 @@ TWrapper::EigenMatrix<2,double> Ax2=2.0*A;
 //Right multiply by a scalar
 TWrapper::EigenMatrix<2,double> Aover2=A*0.5;
 
+//Declare some indices, trust me you want to use auto as the resulting type is
+//nasty...
 auto i=make_index("i");
 auto j=make_index("j");
 auto k=make_index("k");
@@ -98,37 +100,26 @@ auto k=make_index("k");
 //Usual matrix multiplication
 TWrapper::EigenMatrix<2,double> product=A(i,k)*B(k,j);
 
-\endcode
+//A transpose times B
+TWrapper::EigenMatrix<2,double> product2=A(k,i)*B(k,j);
+~~~
 
 Similar to many of the underlying backends, TensorWrapper relies on lazy
 evaluation to provide the above user-friendly API, while still allowing the
 results to be highly optimized.  What this means to you the user is the
 following:
 
-\code{.cpp}
+~~~cpp
 //A will actually contain the result of adding B and C
 TWrapper::EigenMatrix<2,double> A=B+C;
 
 //_A does not contain the result, but rather is a very thin object that
-//describes the details of how to add B and C
+//describes the details of how to add B and C and has a horrific looking type
 auto _A=B+C;
-\endcode
+~~~
 
-The latter line of code allows the user to write equations all on one line like:
-\code{.cpp}
-TWrapper::EigenMatrix<2,double> result=A(i,k)*B(k,j)-A(i,k)*D(k,j);
-\endcode
-
-and have the backend (possibly) optimize it at compile-time (whether it does or
-doesn't depends on the backend; backends like Eigen will perform some
-
-\code{.cpp}
-//Instead of C*A+C*B do C*(A+B)
-TWrapper::EigenMatrix<2,double> R1=A+B;
-TWrapper::EigenMatrix<2,double> result=C(i,k)*R1(k,j);
-\endcode
-
-or
+Basically, unless you assign the result to a TensorWrapper instance your
+resulting object is some unevaluated part of the equation.
 
 
 
