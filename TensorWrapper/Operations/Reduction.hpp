@@ -1,26 +1,21 @@
 #pragma once
 
-/** \file Implements our lazy contraction machinery.
+/** \file Implements our lazy Reduction machinery.
  */
 
 namespace TWrapper {
 namespace detail_ {
 
-/** \brief The class that implements our lazy contraction.
+/** \brief The class that implements our lazy reduction.
  *
  *
- * \tparam LHS_t The type of the tensor on the left of the times sign.
- *               Expected to actually have indices.
- * \tparam RHS_t The type of the tensor on the right side of the times sign.
- *               Expected to actually have indices.
+ * \tparam LHS_t The type of the tensor to reduce. Expected to actually have
+ *         indices.
  */
-template<typename LHS_t,typename RHS_t>
-struct Contraction: public OperationBase<Contraction<LHS_t,RHS_t>> {
-    ///The tensor on the left
+template<typename LHS_t>
+struct Reduction: public OperationBase<Reduction<LHS_t>> {
+    ///The tensor to reduce
     LHS_t lhs_;
-
-    ///The tensor on the right
-    RHS_t rhs_;
 
     ///Indices after contraction
     using indices=typename FreeIndices<typename LHS_t::indices,

@@ -1,5 +1,7 @@
 //This file meant from inclusion only from TensorImpls.hpp
+#define EIGEN_USE_THREADS //Enables threading for eigen::tensor
 #include <eigen3/Eigen/Dense>
+#include <eigen3/unsupported/Eigen/CXX11/ThreadPool>
 #include <eigen3/unsupported/Eigen/CXX11/Tensor>
 #include "TensorWrapper/Indices.hpp"
 namespace TWrapper {
@@ -56,6 +58,12 @@ struct TensorWrapperImpl<rank,T,TensorTypes::EigenTensor> {
 
     type allocate(const array_t& dims)const{
         return allocater<type>(dims);
+    }
+
+    template<typename Tensor_t>
+    auto permute(const Tensor_t& t, const array_t& permutation)const
+    {
+        return t.shuffle(permutation);
     }
 
     template<typename Tensor_t>

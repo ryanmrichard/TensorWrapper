@@ -1,51 +1,89 @@
 #pragma once
 #include "TensorWrapper/Traits.hpp"
 
-/* We will need to define some free functions to get the syntactic sugar right.
- * These definitions will be messy, but these macros should help aid the reader
- * (we avoid typedefs 'cause this is a header).
+/** \file Includes all of our lazy evaluation machinery.  This file is also what
+ *        sets up the syntatic sugar over said lazy evalution.
+ *
+ * \note We use macros here because this is a header file and we
+ *       don't want to pollute the global namespace with typedefs.
  */
 
 //Detail namespace
 #define TWdet TWrapper::detail_
-//An operation on the left
-#define LHS_TWOp TWdet::OperationBase<LHS_t>
-//An operation on the right
-#define RHS_TWOp TWdet::OperationBase<RHS_t>
-
-//An operation between two operations
-#define BINARY_OP(result,sym)\
-template<typename LHS_t, typename RHS_t>\
-TWdet::result<LHS_t,RHS_t> operator sym(const LHS_TWOp& lhs,\
-                                        const RHS_TWOp& rhs)\
-{\
-    const LHS_t& lhs_up=static_cast<const LHS_t&>(lhs);\
-    const RHS_t& rhs_up=static_cast<const RHS_t&>(rhs);\
-    return TWdet::result<LHS_t,RHS_t>(lhs_up,rhs_up);\
-}
-
-//An operation where only the left is an op
-#define UNARY_OP(result,sym)\
-template<typename LHS_t, typename RHS_t,\
-         typename=typename TWdet::EnableIfNotAnOperation<RHS_t>::type>\
-TWdet::result<LHS_t,TWdet::Convert<RHS_t>> operator sym(const LHS_TWOp& lhs,\
-                                                        const RHS_t& rhs)\
-{\
-    const LHS_t& lhs_up=static_cast<const LHS_t&>(lhs);\
-    using new_rhs_t=TWdet::Convert<RHS_t>;\
-    return TWdet::result<LHS_t,new_rhs_t>(lhs_up,new_rhs_t(rhs));\
-}
 
 #include "TensorWrapper/Operations/OperationBase.hpp"
 #include "TensorWrapper/Operations/Convert.hpp"
+#include "TensorWrapper/Operations/Permute.hpp"
 #include "TensorWrapper/Operations/Add.hpp"
 #include "TensorWrapper/Operations/Scale.hpp"
 #include "TensorWrapper/Operations/Subtraction.hpp"
 #include "TensorWrapper/Operations/IndexedTensor.hpp"
 #include "TensorWrapper/Operations/Contraction.hpp"
 
-#undef UNARY_OP
-#undef BINARY_OP
-#undef RHS_TWOp
-#undef LHS_TWOp
+/** \brief \relates AddOp
+ *
+ * Provides the syntactic sugar for adding tensors together.
+ *
+ */
+template<typename LHS_t, typename RHS_t,
+         typename TWdet::EnableIfNotAnOperation<RHS_t>::type=0>
+auto operator+(const TWdet::OperationBase<LHS_t>& lhs,
+               const RHS_t& rhs)
+{
+    return TWdet::AddOp<LHS_t,TWdet::Convert<RHS_t>>(lhs.cast(),
+                                              TWdet::Convert<RHS_t>(rhs));
+}
+
+/** \brief \relates AddOp
+ *
+ * Provides the syntactic sugar for adding tensors together.
+ *
+ */
+template<typename LHS_t, typename RHS_t>
+auto operator+(const TWdet::OperationBase<LHS_t>& lhs,
+               const TWdet::OperationBase<RHS_t>& rhs)
+{
+    return TWdet::AddOp<LHS_t,RHS_t>(lhs.cast(),rhs.cast());
+}
+
+
+template<typename LHS_t, typename RHS_t,
+         typename TWdet::EnableIfNotAnOperation<RHS_t>::type=0>
+auto operator-(const TWdet::OperationBase<LHS_t>& lhs,
+               const RHS_t& rhs)
+{
+    return TWdet::SubtractionOp<LHS_t,TWdet::Convert<RHS_t>>(lhs.cast(),
+                                             TWdet::Convert<RHS_t>(rhs));
+}
+
+
+template<typename LHS_t, typename RHS_t>
+auto operator-(const TWdet::OperationBase<LHS_t>& lhs,
+               const TWdet::OperationBase<RHS_t>& rhs)
+{
+    return TWdet::SubtractionOp<LHS_t,RHS_t>(lhs.cast(),rhs.cast());
+}
+
+
+template<typename LHS_t>
+auto operator*(const TWdet::OperationBase<LHS_t>& lhs,
+               typename LHS_t::scalar_type c)
+{
+    return TWdet::ScaleOp<LHS_t>(lhs.cast(),c);
+}
+
+template<typename RHS_t>
+auto operator*(typename RHS_t::scalar_type c,
+               const TWdet::OperationBase<RHS_t>& rhs)
+{
+    return rhs*c;
+}
+
+template<typename LHS_t, typename RHS_t>
+auto operator*(const TWdet::OperationBase<LHS_t>& lhs,
+               const TWdet::OperationBase<RHS_t>& rhs)
+{
+    return TWdet::Contraction<LHS_t,RHS_t>(lhs.cast(),rhs.cast());
+}
+
 #undef TWdet

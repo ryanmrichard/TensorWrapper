@@ -208,6 +208,13 @@ public:
     }
 };
 
+/** \relates TensorWrapper
+ *
+ *  \brief Fills a TensorWrapper instance with random numbers.
+ *
+ *  \param[in] tensor The tensor to fill with random numbers.
+ *  \returns The tensor now with random numbers.
+ */
 template<size_t R, typename T>
 TensorWrapperBase<R,T>& FillRandom(TensorWrapperBase<R,T>& tensor)
 {
@@ -234,7 +241,7 @@ struct Convert<TensorWrapperBase<R,T>> : public
 {
     using scalar_type=T;
     constexpr static size_t rank=R;
-
+    using indices=IdxNotSet;
     const TWrapper::detail_::TensorPtr<R,T>& data_;
     Convert(const TensorWrapperBase<R,T>& data):
         data_(data.tensor_)

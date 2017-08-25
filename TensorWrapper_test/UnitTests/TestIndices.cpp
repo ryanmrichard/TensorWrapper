@@ -242,6 +242,23 @@ int main()
      static_assert(Free12::get<0>()==i,"Free index1");
      static_assert(Free12::get<1>()==l,"Free index2");
 
+     constexpr std::array<size_t,3> map12{3,0,2};
+     constexpr std::array<size_t,4> map33{0,0,2,3};
+     constexpr std::array<size_t,3> map21{1,3,2};
+     constexpr std::array<size_t,3> map13{0,3,2};
+     constexpr std::array<size_t,4> map31{0,0,2,1};
+     constexpr std::array<size_t,3> map23{3,4,2};
+     constexpr std::array<size_t,4> map32{3,3,2,0};
+
+     static_assert(are_equal(Idx1.get_map(Idx1),com11),"Idx1 map to Idx1");
+     static_assert(are_equal(Idx2.get_map(Idx2),com11),"Idx2 map to Idx2");
+     static_assert(are_equal(Idx3.get_map(Idx3),map33),"Idx3 map to Idx3");
+     static_assert(are_equal(Idx1.get_map(Idx2),map12),"Idx1 map to Idx2");
+     static_assert(are_equal(Idx2.get_map(Idx1),map21),"Idx2 map to Idx1");
+     static_assert(are_equal(Idx1.get_map(Idx3),map13),"Idx1 map to Idx3");
+     static_assert(are_equal(Idx3.get_map(Idx1),map31),"Idx3 map to Idx1");
+     static_assert(are_equal(Idx2.get_map(Idx3),map23),"Idx2 map to Idx3");
+     static_assert(are_equal(Idx3.get_map(Idx2),map32),"Idx3 map to Idx2");
 
     return tester.results();
 }

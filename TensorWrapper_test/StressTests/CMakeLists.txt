@@ -1,6 +1,6 @@
 if(${ENABLE_STRESS_TESTS})
     foreach(test_name BLASBaseLine StressTestEigen StressTestEigenTensor
-            CCSD)
+                      StressTestGlobalArrays CCSD)
         NEW_TEST(${test_name} StressTests)
     endforeach()
 endif()

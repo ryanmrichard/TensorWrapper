@@ -269,6 +269,7 @@ struct Convert<TensorPtr<R,T>> :
 
     constexpr static size_t rank=R;
     using scalar_type=T;
+    using indices=IdxNotSet;
 
     template<TensorTypes TT>
     const typename TensorWrapperImpl<R,T,TT>::type& eval()const

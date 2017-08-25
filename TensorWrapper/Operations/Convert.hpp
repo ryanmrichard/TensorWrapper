@@ -13,13 +13,13 @@ namespace detail_ {
 template<size_t R, typename T>
 class TensorPtr;
 
-
 ///Primary template for Convert, applies to scalars
 template<typename data_t>
 struct Convert: public OperationBase<Convert<data_t>>
 {
 
     const data_t& data_;
+    using indices=IdxNotSet;
     constexpr Convert(const data_t& data):
         data_(data)
     {}

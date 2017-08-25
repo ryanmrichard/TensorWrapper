@@ -67,6 +67,14 @@ struct TensorWrapperImpl<2,T,TensorTypes::EigenMatrix> {
     }
 
     template<typename Tensor_t>
+    auto permute(const Tensor_t& t,
+                 const array_t&)const
+    {
+        //Only one possibility {1,0}
+        return t.transpose();
+    }
+
+    template<typename Tensor_t>
     auto slice(const Tensor_t& impl,
                const array_t& start,
                const array_t& end)const{
@@ -99,7 +107,6 @@ struct TensorWrapperImpl<2,T,TensorTypes::EigenMatrix> {
     {
         return lhs-rhs;
     }
-
 
     template<typename LHS_t,typename RHS_t,typename LHS_Idx,typename RHS_Idx>
     auto contraction(const LHS_t& lhs, const RHS_t& rhs,
@@ -153,6 +160,12 @@ struct TensorWrapperImpl<1,T,TensorTypes::EigenMatrix> {
 
     type allocate(const array_t& dims)const{
         return type(dims[0]);
+    }
+
+    template<typename Tensor_t>
+    auto permute(const Tensor_t& t,const array_t&)
+    {
+        return t.transpose();
     }
 
     template<typename Tensor_t>
@@ -233,6 +246,13 @@ struct TensorWrapperImpl<0,T,TensorTypes::EigenMatrix> {
 
     type allocate(const array_t&)const{
         return type{};
+    }
+
+    template<typename Tensor_t>
+    auto permute(const Tensor_t& t,
+                 const array_t&)
+    {
+        t.transpose();
     }
 
     template<typename Tensor_t>

@@ -25,6 +25,7 @@ struct Convert<Eigen::MatrixXd> :
         public OperationBase<Convert<Eigen::MatrixXd>>
 {
    using scalar_type=double;
+   using indices=IdxNotSet;
    constexpr static size_t rank=2;
    const Eigen::MatrixXd& tensor_;
 

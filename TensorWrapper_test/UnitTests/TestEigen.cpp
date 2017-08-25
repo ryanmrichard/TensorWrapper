@@ -37,7 +37,7 @@ int main()
     tester.test("Slice shape",slice.shape()==Shape<2>({1,2},false));
     tester.test("Same element",slice(0,0)==A(2,1));
 
-
+    //Basic operations
     eigen_matrix D=A+B+C;
     matrix_type _D=_A+_B+_C;
     tester.test("Addition",_D==D);
@@ -54,10 +54,14 @@ int main()
     matrix_type _G=_A-_B-_C;
     tester.test("Subtraction",G==_G);
 
+
+    //Matrix multiplications
     eigen_matrix H=G*E;
     auto i=make_index("i");
     auto j=make_index("j");
     auto k=make_index("k");
+    auto l=make_index("l");
+
     matrix_type _H=_G(i,j)*_E(j,k);
     tester.test("G * E",H==_H);
 
@@ -72,6 +76,25 @@ int main()
     eigen_matrix K=G.transpose()*E.transpose();
     matrix_type _K=_G(j,i)*_E(k,j);
     tester.test("G^T * E^T",K==_K);
+
+    eigen_matrix M=G.transpose()*E*G;
+    matrix_type _M=_G(j,i)*_E(j,k)*_G(k,l);
+    tester.test("G^T*E*G",M==_M);
+
+    //Fancy basic ops
+    eigen_matrix N=E+E.transpose();
+    matrix_type _N=_E(i,j)+_E(j,i);
+    tester.test("E+E^T",_N==N);
+
+    eigen_matrix O=E-E.transpose();
+    matrix_type _O=_E(i,j)-_E(j,i);
+    tester.test("E-E^T",O==_O);
+
+    //Distribution
+    eigen_matrix P=E*(G+G.transpose());
+    matrix_type _P=_E(i,k)*(_G(k,j)+_G(j,i));
+    tester.test("E*(G+G^T)",_P==P);
+
 
     //Self-adjoint Eigen solver
     eigen_matrix L(2,2);

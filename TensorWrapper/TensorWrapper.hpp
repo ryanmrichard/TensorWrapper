@@ -260,6 +260,7 @@ struct Convert<TensorWrapper<R,T,TT>> : public OperationBase<
 {
     using scalar_type=T;
     constexpr static size_t rank=R;
+    using indices=IdxNotSet;
 
     const TensorWrapper<R,T,TT>& data_;
     Convert(const TensorWrapper<R,T,TT>& data):
@@ -284,12 +285,19 @@ template<typename T>
 using EigenMatrix=TensorWrapper<2,T,detail_::TensorTypes::EigenMatrix>;
 template<size_t rank,typename T>
 using EigenTensor=TensorWrapper<rank,T,detail_::TensorTypes::EigenTensor>;
+template<size_t rank,typename T>
+using GlobalArray=TensorWrapper<rank,T,detail_::TensorTypes::GlobalArrays>;
 
 template class TensorWrapper<1,double,detail_::TensorTypes::EigenMatrix>;
 template class TensorWrapper<2,double,detail_::TensorTypes::EigenMatrix>;
+
 template class TensorWrapper<1,double,detail_::TensorTypes::EigenTensor>;
 template class TensorWrapper<2,double,detail_::TensorTypes::EigenTensor>;
 template class TensorWrapper<3,double,detail_::TensorTypes::EigenTensor>;
+template class TensorWrapper<4,double,detail_::TensorTypes::EigenTensor>;
+
+//template class TensorWrapper<1,double,detail_::TensorTypes::GlobalArrays>;
+//template class TensorWrapper<2,double,detail_::TensorTypes::GlobalArrays>;
 
 
 }//End namespace TWrapper

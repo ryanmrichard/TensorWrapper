@@ -26,6 +26,9 @@
  *  here is quite general and should work even if an index does not appear only
  *  twice.
  *
+ *  This whole file can really use some clean-up.  It should be possible to
+ *  rewrite most (all?) of the routines in terms of get_map
+ *
  */
 
 namespace TWrapper {
@@ -224,6 +227,13 @@ private:
         constexpr bool is_good=(get<I>()==other);
         return (is_good && counter==cnt) ? I :
                               position_impl<I+1,counter+is_good>(cnt,other);
+    }
+
+    template<typename RHS_t,size_t...I>
+    constexpr static std::array<size_t,sizeof...(I)>
+    get_map_impl(const RHS_t& rhs,std::index_sequence<I...>)noexcept
+    {
+        return {rhs.position(0,get<I>())...};
     }
 
 public:
@@ -468,6 +478,13 @@ public:
     }
 
 
+    template<typename RHS_t>
+    constexpr auto static get_map(const RHS_t& rhs)noexcept
+    {
+        constexpr size_t rank=size();
+        return get_map_impl(rhs,std::make_index_sequence<rank>());
+    }
+
     /** \brief Returns the position of the \p cnt -th occurence of index
      *  \p other in this set.
      *
@@ -613,5 +630,8 @@ constexpr auto get_dummy(const LHS_t& lhs, const RHS_t& rhs)noexcept
    static_assert(lcommon==rcommon,"Error an index appears more than twice");
    return get_dummy_impl(lhs,rhs,std::make_index_sequence<lcommon>());
 }
+
+
+
 
 }}//End namespaces

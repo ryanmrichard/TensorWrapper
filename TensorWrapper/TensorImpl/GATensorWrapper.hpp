@@ -63,6 +63,13 @@ struct TensorWrapperImpl<rank,T,TensorTypes::GlobalArrays> {
     type allocate(const array_t& dims)const{
         return type(dims);
     }
+
+    template<typename Tensor_t>
+    auto permute(const Tensor_t& t, const array_t&)const
+    {
+        return t.transpose();
+    }
+
     template<typename Tensor_t>
     auto slice(const Tensor_t& impl,
                const array_t& start,
