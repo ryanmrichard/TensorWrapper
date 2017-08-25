@@ -55,6 +55,11 @@ struct SubtractionOp : public OperationBase<SubtractionOp<LHS_t,RHS_t>> {
         lhs_(lhs),rhs_(rhs)
     {}
 
+    std::array<size_t,rank> dimensions()const
+    {
+        return lhs_.dimensions();
+    }
+
     /** \brief Actually evaluates the subtraction.
      *
      * \returns Whatever the backend returns

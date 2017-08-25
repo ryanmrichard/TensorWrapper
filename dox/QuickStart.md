@@ -121,6 +121,50 @@ auto _A=B+C;
 Basically, unless you assign the result to a TensorWrapper instance your
 resulting object is some unevaluated part of the equation.
 
+Backend Agnosticism
+-------------------
+
+The examples above all use the Eigen backend and via the `TWrapper::EigenMatrix`
+type this decision is hard-coded.  One of the major selling points of
+TensorWrapper is the fact that we can write generic routines, regardless of
+which tensor library we want to use.  To do this, one must write their routines
+to accept instances of the common base class, `TWrapper::TensorWrapperBase`.
+This type is templated on the element type and the rank only.  What this means
+is that say you have a function, which for simplicity we
+assume is just matrix multiplication, to capitalize on the backend agnosticism
+of TensorWrapper you simply need to write your algorithm like this:
+
+~~~.cpp
+TWrapper::TensorWrapperBase<2,double> my_algorithm(
+    const TWrapper::TensorWrapperBase<2,double>& matrix1,
+    const Twrapper::TensorWrapperBase<2,double>& matrix2)
+{
+    auto i=make_index("i");
+    auto j=make_index("j");
+    auto k=make_index("k");
+
+    TWrapper::EigenMatrix<2,double> A(matrix1),B(matrix2);
+
+    return A(i,k)*B(k,j);
+}
+~~~
+
+Note that we still had to select a backend to actually do the evaluation (the
+best you can do for a completely backend free code is to template the function
+on the backend type), but our algorithm now works with input tensors coming from
+any backend.  The initialization of the `A` and `B` instances in the above code
+takes care of any required conversions (or is basically a pointer dereference if
+`matrix1` and `matrix2` already are Eigen matrices).
+
+As a slight technical aside, the reason we can't simply do
+`matrix1(i,k)*matrix2(k,j)` is because they may actually have different
+backends.  In that case TensorWrapper would have to choose which backend to use
+or be able to do its own linear algebra in terms of TensorWrapperBase's API.
+The first option is non-transparent to the user and the second one requires
+TensorWrapper to write its own optimized linear algebra kernels (thereby
+defeating the purpose of using backends to begin with).
+
+
 
 
 

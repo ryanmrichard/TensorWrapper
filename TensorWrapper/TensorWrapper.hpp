@@ -146,7 +146,8 @@ public:
     TensorWrapper(const detail_::OperationBase<RHS_t>& op)
     {
         const RHS_t& up_op=static_cast<const RHS_t&>(op);
-        wrapped_t temp_tensor=up_op.template eval<TT>();
+        wrapped_t temp_tensor=impl_.eval(up_op.template eval<TT>(),
+                                         up_op.dimensions());
         ptr_()=std::move(pTensor(TT,std::move(temp_tensor)));
     }
 
@@ -155,7 +156,8 @@ public:
     TensorWrapper& operator=(const detail_::OperationBase<RHS_t>& op)
     {
         const RHS_t& up_op=static_cast<const RHS_t&>(op);
-        wrapped_t result=up_op.template eval<TT>();
+        wrapped_t result=impl_.eval(up_op.template eval<TT>(),
+                                    up_op.dimensions());
         ptr_()=std::move(pTensor(TT,result));
         return *this;
     }

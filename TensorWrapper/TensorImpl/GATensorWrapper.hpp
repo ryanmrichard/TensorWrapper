@@ -95,6 +95,13 @@ struct TensorWrapperImpl<rank,T,TensorTypes::GlobalArrays> {
         return lhs*val;
     }
 
+    template<typename Op_t>
+    type eval(const Op_t& op,const array_t&)const
+    {
+        type c=op;
+        return c;
+    }
+
     ///Adds to the tensor
     template<typename LHS_t,typename RHS_t>
     auto add(const LHS_t& lhs,const RHS_t&rhs)const

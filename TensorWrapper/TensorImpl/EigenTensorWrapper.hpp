@@ -115,6 +115,17 @@ struct TensorWrapperImpl<rank,T,TensorTypes::EigenTensor> {
         return lhs-rhs;
     }
 
+    template<typename Op_t>
+    type eval(const Op_t& op,const array_t& dims)const
+    {
+        const int nthreads=omp_get_max_threads();
+        Eigen::ThreadPool pool(nthreads);
+        Eigen::ThreadPoolDevice my_device(&pool,nthreads);
+        auto c=allocate(dims);
+        c.device(my_device)=op;
+        return c;
+    }
+
     template<typename My_t>
     auto self_adjoint_eigen_solver(const My_t& tensor)const
     {

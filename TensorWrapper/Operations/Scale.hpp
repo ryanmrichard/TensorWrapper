@@ -44,6 +44,11 @@ struct ScaleOp: public OperationBase<ScaleOp<LHS_t>>{
         lhs_(lhs),scalar_(scale)
     {}
 
+    std::array<size_t,rank> dimensions()const
+    {
+        return lhs_.dimensions();
+    }
+
     /** \brief Actually scales the tensor.
      *
      * \tparam TT The enum for the backend we want to use for the scaling.

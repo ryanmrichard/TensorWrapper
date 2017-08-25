@@ -43,6 +43,21 @@ struct Contraction: public OperationBase<Contraction<LHS_t,RHS_t>> {
         lhs_(lhs),rhs_(rhs)
     {}
 
+    std::array<size_t,rank> dimensions()const
+    {
+        auto free=get_free(typename LHS_t::indices(),
+                           typename RHS_t::indices());
+        auto ldims=lhs_.dimensions();
+        auto rdims=rhs_.dimensions();
+        std::array<size_t,rank> rv;
+        size_t counter=0;
+        for(size_t i : free.first)
+            rv[counter++]=ldims[i];
+        for(size_t i : free.second)
+            rv[counter++]=rdims[i];
+        return rv;
+    }
+
     /** \brief Actually runs the contraction.
      *
      * \returns Whatever the backend returns

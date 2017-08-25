@@ -48,6 +48,11 @@ struct IndexedTensor: public OperationBase<IndexedTensor<T,Tensor_t,Index_t>>
         :tensor_(tensor)
     {}
 
+    std::array<size_t,rank> dimensions()const
+    {
+        return tensor_.dimensions();
+    }
+
     /** \brief Returns the result of calling eval on the wrapped tensor.
      *
      *  \returns The result of calling eval on the wrapped tensor.

@@ -31,7 +31,10 @@ protected:
     pTensor tensor_;
 
     ///The type of an operation that converts the type-erased pointer
-    using de_ref_op=detail_::Convert<pTensor>;
+    auto de_ref_op()const
+    {
+        return detail_::Convert<pTensor>(tensor_,shape().dims());
+    }
 
     /** \brief Constructor used by derived classes after wrapping a tensor.
      *
@@ -179,18 +182,18 @@ public:
     template<typename RHS_t>
     auto operator+(const RHS_t& rhs)const
     {
-        return de_ref_op(tensor_)+rhs;
+        return de_ref_op()+rhs;
     }
 
     template<typename RHS_t>
     auto operator-(const RHS_t& rhs)const
     {
-        return de_ref_op(tensor_)-rhs;
+        return de_ref_op()-rhs;
     }
 
     auto operator*(T rhs)const
     {
-        return de_ref_op(tensor_)*rhs;
+        return de_ref_op()*rhs;
     }
 
 
@@ -204,7 +207,7 @@ public:
 
         //constexpr auto counts=Index_t::get_counts();
 
-        return detail_::IndexedTensor<T,de_ref_op,Index_t>(de_ref_op(tensor_));
+        return detail_::IndexedTensor<T,decltype(de_ref_op()),Index_t>(de_ref_op());
     }
 };
 

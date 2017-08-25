@@ -55,6 +55,11 @@ struct AddOp: public OperationBase<AddOp<LHS_t,RHS_t>>{
         lhs_(lhs),rhs_(rhs)
     {}
 
+    std::array<size_t,rank> dimensions()const
+    {
+        return lhs_.dimensions();
+    }
+
     /** \brief Actually evaluates the addition
      *
      *   When called this function will call eval on both the left and right

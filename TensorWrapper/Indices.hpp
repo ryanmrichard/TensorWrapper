@@ -605,7 +605,8 @@ get_dummy_impl(const LHS_t& lhs,
                std::index_sequence<NLHS...>)
 {
     constexpr auto lcommon=lhs.get_common(rhs);
-
+    if(lcommon.size()==0)//Technically not needed, but shuts compiler up
+        return {{},{}};
     return {{lcommon[NLHS]...},
             {RHS_t::position(0,lhs.template get<lcommon[NLHS]>())...}};
 }

@@ -256,20 +256,32 @@ template class TensorPtr<1,double>;
 template class TensorPtr<2,double>;
 template class TensorPtr<3,double>;
 
+/** \brief Partial specialization of the Convert operation to TensorPtrs
+ *
+ * \tparam R The rank of the wrapped tensor
+ * \tparam T The type of the wrapped tensor's elements
+ */
 template<size_t R, typename T>
 struct Convert<TensorPtr<R,T>> :
         public OperationBase<Convert<TensorPtr<R,T>>>
 {
 
     const TensorPtr<R,T>& data_;
+    std::array<size_t,R> dims_;
 
-    Convert(const TensorPtr<R,T>& data):
-        data_(data)
+    Convert(const TensorPtr<R,T>& data,
+            const std::array<size_t,R>& dims):
+        data_(data),dims_(dims)
     {}
 
     constexpr static size_t rank=R;
     using scalar_type=T;
     using indices=IdxNotSet;
+
+    std::array<size_t,R> dimensions()const
+    {
+        return dims_;
+    }
 
     template<TensorTypes TT>
     const typename TensorWrapperImpl<R,T,TT>::type& eval()const

@@ -50,13 +50,5 @@ int main()
     B=std::move(movedB);
     tester.test("Move assignment",&(B.data())==&wrapped);
 
-    detail_::Convert<Eigen::MatrixXd> op(wrapped);
-    EigenMatrix<double> C(op);
-    tester.test("Construct from op",C.data()==wrapped);
-    _A=op;
-    tester.test("Assign from operation",_A.data()==wrapped);
-
-
-
     return tester.results();
 }

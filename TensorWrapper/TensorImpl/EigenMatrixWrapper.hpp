@@ -108,6 +108,13 @@ struct TensorWrapperImpl<2,T,TensorTypes::EigenMatrix> {
         return lhs-rhs;
     }
 
+    template<typename Op_t>
+    type eval(const Op_t& op,const array_t&)const
+    {
+        type c=op;
+        return c;
+    }
+
     template<typename LHS_t,typename RHS_t,typename LHS_Idx,typename RHS_Idx>
     auto contraction(const LHS_t& lhs, const RHS_t& rhs,
                      const LHS_Idx,const RHS_Idx&)const
@@ -182,6 +189,13 @@ struct TensorWrapperImpl<1,T,TensorTypes::EigenMatrix> {
         return lhs == rhs;
     }
 
+    template<typename Op_t>
+    type eval(const Op_t& op, const array_t&)const
+    {
+        type c=op;
+        return c;
+    }
+
     template<typename Tensor_t>
     auto scale(Tensor_t&& lhs,double val)const
     {
@@ -253,6 +267,13 @@ struct TensorWrapperImpl<0,T,TensorTypes::EigenMatrix> {
                  const array_t&)
     {
         t.transpose();
+    }
+
+    template<typename Op_t>
+    type eval(const Op_t& op,const array_t&)const
+    {
+        type c=op;
+        return c;
     }
 
     template<typename Tensor_t>

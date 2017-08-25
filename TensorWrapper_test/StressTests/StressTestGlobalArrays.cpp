@@ -3,7 +3,7 @@
 
 using namespace TWrapper;
 using tensor_type=TensorWrapper<2,double,detail_::TensorTypes::GlobalArrays>;
-using wrapped_type=GATensor<2,double>;
+
 
 void print_times(const std::string& msg, double native_time, double twtime)
 {
@@ -15,6 +15,8 @@ void print_times(const std::string& msg, double native_time, double twtime)
 int main(int argc, char** argv)
 {
     Tester tester("Stress Testing Global Arrays Wrapping");
+ #ifdef ENABLE_GAXX
+    using wrapped_type=GATensor<2,double>;
     const size_t dim=argc>1?atoi(argv[1]):10000;
     const std::array<size_t,2> dims({dim,dim});
     tensor_type _A(dims),_B(dims),_C(dims);
@@ -65,6 +67,6 @@ int main(int argc, char** argv)
     wrapper_time=timer.get_time();
     print_times("A^T*B*C",native_time,wrapper_time);
     tester.test("A^T*B*C",D==_D);
-
+#endif
     return tester.results();
 }

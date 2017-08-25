@@ -39,6 +39,19 @@ struct Permutation: public OperationBase<Permutation<NewIdx,OldIdx,Tensor_t>> {
     ///The indices after permutation
     using indices=NewIdx;
 
+    std::array<size_t,rank> dimensions()const
+    {
+        std::array<size_t,rank> rv,old2new=OldIdx::get_map(NewIdx());
+        auto dims=t_.dimensions();
+        for(size_t i=0;i<rank;++i)
+        {
+            if(old2new[i]==rank)
+                throw std::runtime_error("Indices do not match");
+            rv[old2new[i]]=dims[i];
+        }
+        return rv;
+    }
+
     /** \brief Actually evaluates the permutation.
      *
      *
