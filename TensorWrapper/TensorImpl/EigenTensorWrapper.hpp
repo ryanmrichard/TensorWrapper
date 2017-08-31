@@ -40,20 +40,15 @@ struct TensorWrapperImpl<rank,T,TensorTypes::EigenTensor> {
 
     template<typename Tensor_t>
     MemoryBlock<rank,T> get_memory(Tensor_t& impl)const{
-        return MemoryBlock<rank,T>(dims(impl),dims(impl).dims(),
-               [&](const array_t& idx)->T&{return impl(idx);});
+        MemoryBlock<rank,T> rv;
+        rv.add_block(impl.data(),dims(impl),array_t{},dims(impl).dims());
+        return rv;
     }
 
     template<typename Tensor_t>
     void set_memory(Tensor_t& impl,const MemoryBlock<rank,T>& block)const
     {
-        for(const auto& idx:block.local_shape)
-        {
-            array_t full_idx;
-            std::transform(idx.begin(),idx.end(),block.start.begin(),
-                           full_idx.begin(),std::plus<size_t>());
-            impl(full_idx)=block(idx);
-        }
+        SetMemoryImpl<rank,T>::eval(impl,block,std::make_index_sequence<rank>());
     }
 
     type allocate(const array_t& dims)const{
@@ -83,9 +78,9 @@ struct TensorWrapperImpl<rank,T,TensorTypes::EigenTensor> {
     }
 
 
-    template<typename LHS_t, typename RHS_t, typename LHS_Idx, typename RHS_Idx>
-    auto contraction(const LHS_t& lhs, const RHS_t& rhs,
-                     const LHS_Idx&, const RHS_Idx&)
+    template<typename LHS_Idx, typename RHS_Idx,
+             typename LHS_t, typename RHS_t>
+    auto contraction(const LHS_t& lhs, const RHS_t& rhs)
     {
         constexpr size_t ndummy=LHS_Idx::ncommon(RHS_Idx());
         const auto dummy=detail_::get_dummy(LHS_Idx(),RHS_Idx());
@@ -95,27 +90,55 @@ struct TensorWrapperImpl<rank,T,TensorTypes::EigenTensor> {
         return lhs.contract(rhs,temp);
     }
 
-    template<typename LHS_t>
-    auto scale(const LHS_t& lhs,double val)const->decltype(lhs*val)
+    template<typename,typename LHS_t>
+    auto scale(const LHS_t& lhs,double val)const
     {
         return lhs*val;
     }
 
+    template<typename L, typename R>
+    using EnableIfSame=std::enable_if<std::is_same<L,R>::value,int>;
+
+    template<typename L, typename R>
+    using EnableIfNotSame=std::enable_if<!std::is_same<L,R>::value,int>;
+
     ///Adds to the tensor
-    template<typename LHS_t,typename RHS_t>
+    template<typename LHS_Idx,typename RHS_Idx,
+             typename LHS_t,typename RHS_t,
+             typename EnableIfSame<LHS_Idx,RHS_Idx>::type=0>
     auto add(const LHS_t& lhs,const RHS_t&rhs)const
     {
         return lhs+rhs;
     }
 
+    template<typename LHS_Idx,typename RHS_Idx,
+             typename LHS_t,typename RHS_t,
+             typename EnableIfNotSame<LHS_Idx,RHS_Idx>::type=0>
+    auto add(const LHS_t& lhs,const RHS_t&rhs)const
+    {
+        auto map=LHS_Idx::get_map(RHS_Idx());
+        return lhs+rhs.shuffle(map);
+    }
+
     ///Subtracts from the tensor
-    template<typename LHS_t,typename RHS_t>
+    template<typename LHS_Idx,typename RHS_Idx,
+             typename LHS_t,typename RHS_t,
+             typename EnableIfSame<LHS_Idx,RHS_Idx>::type=0>
     auto subtract(const LHS_t& lhs,const RHS_t&rhs)const
     {
         return lhs-rhs;
     }
 
-    template<typename Op_t>
+    template<typename LHS_Idx,typename RHS_Idx,
+             typename LHS_t,typename RHS_t,
+             typename EnableIfNotSame<LHS_Idx,RHS_Idx>::type=0>
+    auto subtract(const LHS_t& lhs,const RHS_t&rhs)const
+    {
+        auto map=LHS_Idx::get_map(RHS_Idx());
+        return lhs-rhs.shuffle(map);
+    }
+
+    template<typename,typename Op_t>
     type eval(const Op_t& op,const array_t& dims)const
     {
         const int nthreads=omp_get_max_threads();

@@ -7,7 +7,8 @@ namespace detail_{
 ///Enumerations of the tensors
 enum class TensorTypes {EigenMatrix,
                         EigenTensor,
-                        GlobalArrays
+                        GlobalArrays,
+                        TiledArray
 };
 ///Macro for calling a function with one of the TensorTypes
 #define TTGuts(name)\

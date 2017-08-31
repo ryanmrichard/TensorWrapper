@@ -2,6 +2,7 @@
 #include <array>
 #include "TensorWrapper/DisableUselessWarnings.hpp"
 #include "TensorWrapper/TensorWrapperBase.hpp"
+#include "TensorWrapper/RunTime.hpp"
 
 /** \file This is the main include file for the TensorWrapper library it defines
  *  our public API.
@@ -15,6 +16,13 @@ namespace TWrapper {
 
 /** \brief The namesake class of the TensorWrapper library.
  *
+ *  If you are making tensors you will be making instances of this class.  If
+ *  your routine is taking tensors as input you will be working with the
+ *  base class.
+ *
+ *  \tparam R The rank of the tensor
+ *  \tparam T The type of the elements in the tensor
+ *  \tparam TT The enum of the backend to use
  */
 template<size_t R, typename T, detail_::TensorTypes TT>
 class TensorWrapper: public TensorWrapperBase<R,T>{
@@ -50,9 +58,10 @@ private:
         return this->tensor_;
     }
 
-    ///Allows us to grab the tensor pointer form other instances
+    ///Allows us to grab the tensor pointer from other TensorWrapper instances
     template<size_t R2, typename T2, detail_::TensorTypes TT2>
     friend class TensorWrapper;
+
 public:
     ///The type of an instance of this class
     using my_type=TensorWrapper<R,T,TT>;
@@ -60,9 +69,10 @@ public:
     ///The type of the base class
     using base_type=TensorWrapperBase<R,T>;
 
-    ///The type wrappe by this class
+    ///The type of the backend's tensor class
     using wrapped_t=typename Impl_t::type;
 
+    ///The type of an R element std::array of size_t s
     using index_t=typename base_type::index_t;
 
     ///\copydoc TensorWrapperBase()
@@ -86,22 +96,68 @@ public:
         return std::make_unique<my_type>(*this);
     }
 
+    /** \brief The "copy" constructor for TensorWrapper instances that do not
+     *   share the same backend.
+     *
+     *   This function ultimately will invoke the copy constructor of the
+     *   backend.  Whether this is a deep copy depends on whether the backend's
+     *   copy constructor deep copies.
+     *
+     *   \param[in] other The TensorWrapper instance to copy
+     *
+     *   \tparam TT2 The enum of the backend of \p other
+     *
+     */
     template<detail_::TensorTypes TT2,
-             typename std::enable_if<TT2!=TT,int>::type=0>
+             typename detail_::EnableIfNotSameBackend<TT,TT2>::type=0>
     TensorWrapper(const TensorWrapper<R,T,TT2>& other)
         :base_type(std::move(other.ptr_().template convert<TT>()))
     {}
 
+    /** \brief The "copy" assignment operator for TensorWrapper instances that
+     *  do not share the same backend.
+     *
+     *   This function ultimately will invoke the copy constructor of the
+     *   backend.  Whether this is a deep copy depends on whether the backend's
+     *   copy constructor deep copies.
+     *
+     *   \param[in] other The TensorWrapper instance to copy
+     *   \returns The current instance as a copy of \p other.
+     *   \tparam TT2 The enum of the backend of \p other
+     *
+     */
     template<detail_::TensorTypes TT2,
-             typename std::enable_if<TT2!=TT,int>::type=0>
+             typename detail_::EnableIfNotSameBackend<TT,TT2>::type=0>
     my_type& operator=(const TensorWrapper<R,T,TT2>& other)
     {
         base_type::tensor_=std::move(other.ptr_().template convert<TT>());
         return *this;
     }
 
-    TensorWrapper(const my_type&)=default;
-    my_type& operator=(const my_type&)=default;
+    /** \brief The copy constructor for TensorWrapper instances that share the
+     *   same backend.
+     *
+     *   This function ultimately will invoke the copy constructor of the
+     *   backend.  Whether this is a deep copy depends on whether the backend's
+     *   copy constructor deep copies.
+     *
+     *   \param[in] other The TensorWrapper instance to copy
+     *
+     */
+    TensorWrapper(const my_type& /*other*/)=default;
+
+    /** \brief The copy assignment operator for TensorWrapper instances that
+     *  share the same backend.
+     *
+     *   This function ultimately will invoke the copy constructor of the
+     *   backend.  Whether this is a deep copy depends on whether the backend's
+     *   copy constructor deep copies.
+     *
+     *   \param[in] other The TensorWrapper instance to copy
+     *   \returns The current instance containing a copy of \p other
+     *
+     */
+    my_type& operator=(const my_type& /*other*/)=default;
 
     TensorWrapper(my_type&&)=default;
     my_type& operator=(my_type&&)=default;
@@ -137,7 +193,7 @@ public:
      *  After calling this constructor the memory is allocated, but in an
      *  undefined initialization state.
      */
-    TensorWrapper(const index_t& dims)
+    TensorWrapper(index_t dims)
     {
         ptr_()=std::move(pTensor(TT,std::move(impl_.allocate(dims))));
     }
@@ -146,8 +202,8 @@ public:
     TensorWrapper(const detail_::OperationBase<RHS_t>& op)
     {
         const RHS_t& up_op=static_cast<const RHS_t&>(op);
-        wrapped_t temp_tensor=impl_.eval(up_op.template eval<TT>(),
-                                         up_op.dimensions());
+        wrapped_t temp_tensor=impl_.template eval<typename RHS_t::indices>(
+                    up_op.template eval<TT>(),up_op.dimensions());
         ptr_()=std::move(pTensor(TT,std::move(temp_tensor)));
     }
 
@@ -155,10 +211,8 @@ public:
     template<typename RHS_t>
     TensorWrapper& operator=(const detail_::OperationBase<RHS_t>& op)
     {
-        const RHS_t& up_op=static_cast<const RHS_t&>(op);
-        wrapped_t result=impl_.eval(up_op.template eval<TT>(),
-                                    up_op.dimensions());
-        ptr_()=std::move(pTensor(TT,result));
+        TensorWrapper temp(op);
+        *this=std::move(temp);
         return *this;
     }
 
@@ -181,11 +235,11 @@ public:
     T operator()(const index_t& idx)const override
     {
         //Grab a 1 x 1 x 1.... slice of the tensor and return its only element
-        index_t p1,zeros{};
+        index_t p1;
         for(size_t i=0;i<R;++i)p1[i]=idx[i]+1;
         auto slice_of_t=impl_.slice(data(),idx,p1);
         my_type temp(std::move(slice_of_t));
-        return temp.get_memory()(zeros);
+        return temp.get_memory().block(0)[0];
     }
 
     wrapped_t slice(const index_t& start,const index_t& end)const
@@ -238,8 +292,6 @@ public:
     {
         return base_type::operator()(str,args...);
     }
-
-
  };
 
 template<typename T, detail_::TensorTypes TT>

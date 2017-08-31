@@ -68,10 +68,9 @@ struct Contraction: public OperationBase<Contraction<LHS_t,RHS_t>> {
     auto eval()const
     {
         using Impl_t=TensorWrapperImpl<LHS_t::rank,scalar_type,TT>;
-        return Impl_t().contraction(lhs_.template eval<TT>(),
-                                    rhs_.template eval<TT>(),
-                                    typename LHS_t::indices(),
-                                    typename RHS_t::indices());
+        return Impl_t().template contraction<typename LHS_t::indices,
+                                             typename RHS_t::indices>(
+                    lhs_.template eval<TT>(),rhs_.template eval<TT>());
     }
 };
 

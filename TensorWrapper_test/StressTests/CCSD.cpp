@@ -62,22 +62,25 @@ int main()
     //Doubles residuals
     EigenTensor<4,double> OmegaA2=Gtilde(i,a,j,b)+T2(i,c,j,d)*Gtilde(a,c,b,d);
     EigenTensor<4,double> OmegaB2=T2(k,a,l,b)*
-            (Gtilde(k,i,l,j)+T2(i,c,j,d)*Gtilde(k,c,l,d));
-    EigenTensor<4,double> OmegaC2=-0.5*T2(k,b,j,c)*
-            (Gtilde(k,i,a,c)-0.5*T2(l,a,i,d)*Gtilde(k,d,l,c))-T2(k,b,i,c)*
-            (Gtilde(k,j,a,c)+T2(i,a,j,d)*Gtilde(k,d,l,c));
-    EigenTensor<4,double> OmegaD2=0.5*u(j,b,k,c)*(Ltilde(a,i,k,c)+
-                             0.5*u(i,a,l,d)*Ltilde(l,d,k,c)*0.25);
-    EigenTensor<4,double> OmegaE2=T2(i,a,j,c)*
-            (Ftilde(b,c)-u(k,b,l,d)*Gtilde(l,d,k,c))-T2(i,a,k,b)*
-            (Ftilde(k,j)-u(i,c,j,d)*Gtilde(k,d,l,c));
+            T2(k,a,l,b)*Gtilde(k,i,l,j)+T2(k,a,l,b)*T2(i,c,j,d)*Gtilde(k,c,l,d);
+    EigenTensor<4,double> OmegaC2=-0.5*T2(k,b,j,c)*Gtilde(k,i,a,c)-
+                0.5*T2(k,b,j,c)*T2(l,a,i,d)*Gtilde(k,d,l,c)-
+                T2(k,b,i,c)*Gtilde(k,j,a,c)+
+                T2(k,b,i,c)*T2(i,a,j,d)*Gtilde(k,d,l,c);
+    EigenTensor<4,double> OmegaD2=0.5*u(j,b,k,c)*Ltilde(a,i,k,c)+
+                             0.25*u(j,b,k,c)*u(i,a,l,d)*Ltilde(l,d,k,c);
+    EigenTensor<4,double> OmegaE2=T2(i,a,j,c)*Ftilde(b,c)-
+                                  T2(i,a,j,c)*u(k,b,l,d)*Gtilde(l,d,k,c)-
+                                  T2(i,a,k,b)*Ftilde(k,j)-
+                                  T2(i,a,k,b)*u(l,c,j,d)*Gtilde(k,d,l,c);
 
     EigenTensor<4,double> Omega2=OmegaA2(i,a,j,b)+OmegaB2(i,a,j,b)+
                                  OmegaC2(i,a,j,b)+OmegaC2(j,b,i,a)+
                                  OmegaD2(i,a,j,b)+OmegaD2(j,b,i,a)+
                                  OmegaE2(i,a,j,b)+OmegaE2(j,b,i,a);
 
-    EigenTensor<4,double> L=G(p,q,r,s)*2.0-G(p,s,r,q);
-    auto CCSD_corr_egy=T2(i,a,j,b)*L(i,a,j,b)+T1(i,a)*L(i,a,j,b)*T1(j,b);
+    //EigenTensor<4,double> L=G(p,q,r,s)*2.0-G(p,s,r,q);
+    //auto CCSD_corr_egy=T2(i,a,j,b)*L(i,a,j,b)+T1(i,a)*L(i,a,j,b)*T1(j,b);
+
     return 0;
 }

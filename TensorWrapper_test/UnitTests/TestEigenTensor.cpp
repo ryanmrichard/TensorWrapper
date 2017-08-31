@@ -2,8 +2,8 @@
 #include "TestHelpers.hpp"
 
 using namespace TWrapper;
-using tensor_type=EigenTensor<2,double>;
-using wrapped_type=tensor_type::wrapped_t;
+using namespace TWrapper::detail_;
+using eigen_tensor=Eigen::Tensor<double,2>;
 using idx_t=Eigen::IndexPair<int>;
 template<size_t n>
 using idx_array=std::array<idx_t,n>;
@@ -12,59 +12,120 @@ int main()
 {
     Tester tester("Testing Eigen Tensor Wrapping");
     const size_t dim=10;
+    const std::array<size_t,2> dims{dim,dim};
+    TensorWrapperImpl<2,double,TensorTypes::EigenTensor> impl;
 
-    tensor_type _A({dim,dim}),_B({dim,dim}),_C({dim,dim});
-    FillRandom(_A);
-    FillRandom(_B);
-    FillRandom(_C);
-    wrapped_type A=_A.data(),B=_B.data(),C=_C.data();
+    eigen_tensor A(dim,dim);
+    A.setConstant(3.0);
 
-    Shape<2> corr_shape(std::array<size_t,2>{dim,dim},false);
-    tester.test("Allocated shape",_A.shape()==corr_shape);
+    //Shape
+    Shape<2> corr_shape(dims,false);
+    tester.test("Shape",impl.dims(A)==corr_shape);
 
-    auto memory=_A.get_memory();
-    tester.test("Memory shape",memory.local_shape==corr_shape);
-    tester.test("Memory get",memory(3,3)==A({3,3}));
-    memory(3,3)=999.9;
-    _A.set_memory(memory);
-    tester.test("Memory set",_A(3,3)==999.9);
-    A({3,3})=999.9;
+    //Get/Set memory
+    auto mem=impl.get_memory(A);
+    tester.test("NBlocks",mem.nblocks()==1);
+    std::vector<double> corr_mem(100,3.0);
+    tester.test("Memory contents",mem.block(0)==A.data());
+    for(size_t i=5;i<10;++i)
+        for(size_t j=0;j<5;++j)
+        {
+            mem.block(0)[j*10+i]=4.0;
+            corr_mem[j*10+i]=4.0;
+        }
 
-    tensor_type slice=_A.slice({2,1},{3,3});
-    tester.test("Slice shape",slice.shape()==Shape<2>({1,2},false));
-    tester.test("Same element",slice(0,0)==A(2,1));
+    eigen_tensor B=impl.allocate(dims);
+    impl.set_memory(B,mem);
+    auto mem2=impl.get_memory(B);
+    tester.test("Set memory",
+                std::equal(corr_mem.begin(),corr_mem.end(),mem2.block(0)));
 
-    wrapped_type D=A+B+C;
-    tensor_type _D=_A+_B+_C;
-    tester.test("Addition",_D==D);
+    //Equality
+    tester.test("Are equal",impl.are_equal(A,A));
 
-    wrapped_type E=A-B-C;
-    tensor_type _E=_A-_B-_C;
-    tester.test("Subtraction",_E==E);
+    //TATensor F,G;
+    //F("i,j")=B("i,j").block({0,0},{5,5});
+    //std::cout<<F<<std::endl;
+    //G=impl.slice(B,{4,4},{6,6});
+    //mem=impl.get_memory(G);
+    //std::array<double,4> corr_slice({3.0,3.0,4.0,3.0});
+    //tester.test("Slice",std::equal(corr_slice.begin(),corr_slice.end(),
+    //                               mem.block(0));
 
-    wrapped_type F=E*0.5;//Eigen::Tensor doesn't overload the lhs...
-    tensor_type _F=0.5*_E;
-    tester.test("Double on lhs",_F==F);
 
-    wrapped_type G=E*0.5;
-    tensor_type _G=_E*0.5;
-    tester.test("Double on rhs",_G==G);
-
-    wrapped_type H=G.contract(A,idx_array<1>({idx_t({1,0})}));
     auto i=make_index("i");
     auto j=make_index("j");
     auto k=make_index("k");
-    tensor_type _H=_G(i,k)*_A(k,j);
-    tester.test("Contraction",_H==H);
+    auto l=make_index("l");
+    using idx_ij=detail_::make_indices<decltype(i),decltype(j)>;
+    using idx_ik=detail_::make_indices<decltype(i),decltype(k)>;
+    using idx_ji=detail_::make_indices<decltype(j),decltype(i)>;
+    using idx_jk=detail_::make_indices<decltype(j),decltype(k)>;
+    using idx_kl=detail_::make_indices<decltype(k),decltype(l)>;
+
+    //Addition
+    eigen_tensor E,D,C=A+B;
+    D=impl.add<idx_ij,idx_ij>(A,B);
+    tester.test("A + B",impl.are_equal(C,D));
+    D=A+B+C;
+    E=impl.add<idx_ij,idx_ij>(impl.add<idx_ij,idx_ij>(A,B),C);
+    tester.test("A + B + C",impl.are_equal(D,E));
+    C=A+B.shuffle(std::array<int,2>{1,0});
+    D=impl.add<idx_ij,idx_ji>(A,B);
+    tester.test("A + B^T",impl.are_equal(C,D));
+
+    //Subtraction
+    C=A-B;
+    D=impl.subtract<idx_ij,idx_ij>(A,B);
+    tester.test("A - B",impl.are_equal(C,D));
+    D=A-B-C;
+    E=impl.subtract<idx_ij,idx_ij>(impl.subtract<idx_ij,idx_ij>(A,B),C);
+    tester.test("A - B - C",impl.are_equal(D,E));
+    C=A-B.shuffle(std::array<int,2>{1,0});
+    D=impl.subtract<idx_ij,idx_ji>(A,B);
+    tester.test("A - B^T",impl.are_equal(C,D));
+
+    //Scale
+    C=A*0.5;
+    D=impl.scale<idx_ij>(A,0.5);
+    tester.test("Scale",impl.are_equal(C,D));
+
+    //Permute
+    C=B.shuffle(std::array<int,2>{1,0});
+    D=impl.permute(B,{1,0});
+    tester.test("Permutation",impl.are_equal(C,D));
+
+    //Contraction
+    D=A.contract(B,idx_array<1>{idx_t{1,0}});
+    E=impl.contraction<idx_ij,idx_jk>(A,B);
+    tester.test("A * B",impl.are_equal(D,E));
+    D=A.contract(B,idx_array<1>{idx_t{0,0}});
+    E=impl.contraction<idx_ji,idx_jk>(A,B);
+    tester.test("A^T * B",impl.are_equal(D,E));
+    D=A.contract(B,idx_array<1>{idx_t{0,0}}).
+            contract(C,idx_array<1>{idx_t{1,0}});
+    E=impl.contraction<idx_ik,idx_kl>(impl.contraction<idx_ji,idx_jk>(A,B),C);
+    tester.test("A^T * B * C",impl.are_equal(D,E));
+
+    //Eval
+    C=A+B;
+    E=impl.eval<idx_ij>(impl.add<idx_ij,idx_ij>(A,B),dims);
+    tester.test("Eval",impl.are_equal(C,E));
+
 
     Eigen::MatrixXd I(2,2);
     I<<1, 2, 2, 3;
-    EigenMatrix<double> __I(I);
-    auto values=self_adjoint_eigen_solver(__I);
-    tensor_type _I(__I);
-    auto eigen_sys=self_adjoint_eigen_solver(_I);
-    tester.test("Eigenvalues",eigen_sys.first==EigenTensor<1,double>(values.first));
-    tester.test("Eigenvectors",eigen_sys.second==tensor_type(values.second));
+    eigen_tensor _I(2,2);
+    _I(0,0)=1;_I(0,1)=2;_I(1,0)=2;_I(1,1)=3;
+    auto values=impl.self_adjoint_eigen_solver(_I);
+    auto eigen_sys=Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd>(I);
+    tester.test("Eigenvalues",eigen_sys.eigenvalues()(0)==values.first(0)&&
+                              eigen_sys.eigenvalues()(1)==values.first(1));
+    tester.test("Eigenvectors",
+                eigen_sys.eigenvectors()(0,0)==values.second(0,0)&&
+                eigen_sys.eigenvectors()(0,1)==values.second(0,1)&&
+                eigen_sys.eigenvectors()(1,0)==values.second(1,0)&&
+                eigen_sys.eigenvectors()(1,1)==values.second(1,1));
 
     return tester.results();
 }

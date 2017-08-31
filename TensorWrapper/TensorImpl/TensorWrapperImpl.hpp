@@ -88,9 +88,33 @@ struct TensorWrapperImpl {
         static_assert(always_false<T>::value,"Tensor defines no scale() API");
     }
 
-    ///Adds to the tensor
-    template<typename LHS_t, typename RHS_t>
-    void add(const LHS_t&,const RHS_t&)const
+   /** \brief The API for adding two tensors together
+    *
+    *   This is the API that needs specialized to implement addition for a
+    *   backend.  When the function is called you can assume that the indices
+    *   have been checked for the following:
+    *
+    *   - Same number
+    *
+    *
+    *   \param[in] lhs The tensor on the left of the + sign.  May be either a
+    *              tensor or part of a lazy expression.
+    *   \param[in] rhs Same as \p lhs except for the tensor on the right of the
+    *              + sign.
+    *
+    *   \returns Whatever the backend returns.  May be an object capable of
+    *   lazy evaluation or an actual tensor depending on the backend.
+    *
+    *   \tparam LHS_Idx The type of the indices for the left tensor
+    *   \tparam RHS_Idx The type of the indices for the right tensor
+    *   \tparam LHS_t The type of the tensor on the left of the + sign
+    *   \tparam RHS_t The type of the tensor on the right of the + sign
+
+    *
+    */
+    template<typename LHS_Idx,typename RHS_Idx,
+             typename LHS_t, typename RHS_t>
+    void add(const LHS_t&/*lhs*/,const RHS_t&/*rhs*/)const
     {
         static_assert(always_false<T>::value,"Tensor defines no add() API");
     }

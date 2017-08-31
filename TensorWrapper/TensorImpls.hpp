@@ -8,3 +8,6 @@
 #ifdef ENABLE_GAXX
     #include "TensorWrapper/TensorImpl/GATensorWrapper.hpp"
 #endif
+#ifdef ENABLE_tiledarray
+    #include "TensorWrapper/TensorImpl/TiledArrayWrapper.hpp"
+#endif

@@ -81,6 +81,8 @@ auto contract(const LHS_t& lhs, const RHS_t& rhs){\
 CHelperSpecial(0,2,false,false,lhs.cwiseProduct(rhs).sum());
 //i,j * j,i or j,i * i,j
 CHelperSpecial(0,2,false,true,lhs.cwiseProduct(rhs.transpose()).sum());
+//i,j * j,i or j,i * i,j
+CHelperSpecial(0,2,true,false,lhs.transpose().cwiseProduct(rhs).sum());
 //i,j * k,j
 CHelperSpecial(2,1,false,true,lhs*rhs.transpose());
 //j,i * j,k

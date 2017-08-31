@@ -177,6 +177,7 @@ public:
 
     /** \brief Starts the lazy evaluation chain when first operation is addition
      *
+     *  This overload allows
      *
      */
     template<typename RHS_t>
@@ -225,8 +226,17 @@ TensorWrapperBase<R,T>& FillRandom(TensorWrapperBase<R,T>& tensor)
          std::random_device rd;
          std::mt19937 gen(rd());
          std::uniform_real_distribution<> dis(0,10);
-         for(auto idx : mem.local_shape)
-             mem(idx)=dis(gen);
+         for(size_t i=0;i<mem.nblocks();++i)
+         {
+             auto idx=mem.begin(i),end=mem.end(i);
+             size_t counter=0;
+             T* buffer=mem.block(i);
+             while(idx!=end)
+             {
+                 buffer[counter++]=dis(gen);
+                 ++idx;
+             }
+         }
          tensor.set_memory(mem);
          return tensor;
 }

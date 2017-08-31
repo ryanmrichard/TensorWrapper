@@ -2,175 +2,204 @@
 #include "TestHelpers.hpp"
 
 using namespace TWrapper;
-using matrix_type=EigenMatrix<double>;
-using vector_type=EigenVector<double>;
+using namespace TWrapper::detail_;
 using eigen_matrix=Eigen::MatrixXd;
 using eigen_vector=Eigen::VectorXd;
+using eigen_scalar=Eigen::Matrix<double,1,1>;
+
+template<size_t R>
+using impl_t=TensorWrapperImpl<R,double,TensorTypes::EigenMatrix>;
 
 int main()
 {
-    Tester tester("Testing Eigen Matrix Wrapping");
+    Tester tester("Testing wrapping of Eigen matrix library");
     const size_t dim=10;
-    const std::array<size_t,2> shape({10,10});
+    const std::array<size_t,2> shape({dim,dim});
+    const std::array<size_t,1> vshape({dim});
+    const std::array<size_t,0> sshape({});
     eigen_matrix A=eigen_matrix::Random(dim,dim),
-                B=eigen_matrix::Random(dim,dim),
-                C=eigen_matrix::Random(dim,dim);
+                 B=eigen_matrix::Random(dim,dim),
+                 C=eigen_matrix::Random(dim,dim);
+    eigen_vector vA=eigen_vector::Random(dim),
+                 vB=eigen_vector::Random(dim),
+                 vC=eigen_vector::Random(dim);
+    eigen_scalar sA=eigen_scalar::Random(1),
+                 sB=eigen_scalar::Random(1),
+                 sC=eigen_scalar::Random(1);
+    impl_t<2> impl;
+    impl_t<1> vimpl;
+    impl_t<0> simpl;
+
+    //Dimensions
     Shape<2> corr_shape(shape,false);
+    Shape<1> vcorr_shape(vshape,false);
+    Shape<0> scorr_shape(sshape,false);
+    tester.test("Matrix shape",impl.dims(A)==corr_shape);
+    tester.test("Vector shape",vimpl.dims(vA)==vcorr_shape);
+    tester.test("Scalar shape",simpl.dims(sA)==scorr_shape);
 
-    //Allocator
-    matrix_type allocated(shape);
-    tester.test("Allocate dimensions",allocated.shape()==corr_shape);
+    //Get Memory
+    auto mem=impl.get_memory(A);
+    tester.test("Matrix NBlocks",mem.nblocks()==1);
+    tester.test("Matrix pointer",mem.block(0)==A.data());
+    auto vmem=vimpl.get_memory(vA);
+    tester.test("Vector NBlocks",vmem.nblocks()==1);
+    tester.test("Vector pointer",vmem.block(0)==vA.data());
+    auto smem=simpl.get_memory(sA);
+    tester.test("Scalar NBlocks",smem.nblocks()==1);
+    tester.test("Scalar pointer",smem.block(0)==sA.data());
 
-    //Construction from Eigen Matrix
-    matrix_type _A(A),_B(B),_C(C);
-    tester.test("Values",_A==A);
+    //Set Memory
+    mem.block(0)[0]=999.0;
+    impl.set_memory(A,mem);
+    tester.test("Matrix Set Memory",A(0,0)==999.0);
+    vmem.block(0)[0]=999.0;
+    vimpl.set_memory(vA,vmem);
+    tester.test("Vector Set Memory",vA(0,0)==999.0);
+    smem.block(0)[0]=999.0;
+    simpl.set_memory(sA,smem);
+    tester.test("Scalar Set Memory",sA(0,0)==999.0);
 
-    auto memory=_A.get_memory();
-    tester.test("Memory shape",memory.local_shape==corr_shape);
-    tester.test("Memory get",memory(3,3)==A(3,3));
-    memory(3,3)=999.9;
-    _A.set_memory(memory);
-    tester.test("Memory set",_A(3,3)==999.9);
-    A(3,3)=999.9;
-
-    matrix_type slice=_A.slice({2,1},{3,3});
-    tester.test("Slice shape",slice.shape()==Shape<2>({1,2},false));
-    tester.test("Same element",slice(0,0)==A(2,1));
-
-    //Basic operations
-    eigen_matrix D=A+B+C;
-    matrix_type _D=_A+_B+_C;
-    tester.test("Addition",_D==D);
-
-    eigen_matrix E=0.5*D;
-    matrix_type _E=0.5*_D;
-    tester.test("Left scale",_E==E);
-
-    eigen_matrix F=D*0.5;
-    matrix_type _F=_D*0.5;
-    tester.test("Right scale",_F==F);
-
-    eigen_matrix G=A-B-C;
-    matrix_type _G=_A-_B-_C;
-    tester.test("Subtraction",G==_G);
+    //Slice
+    eigen_matrix slice=impl.slice(A,{2,1},{3,3});
+    tester.test("Matrix slice",slice(0,0)==A(2,1));
+    eigen_vector vslice=vimpl.slice(vA,{2},{3});
+    tester.test("Vector slice",vslice(0)==vA(2));
 
 
-    //Matrix multiplications
-    eigen_matrix H=G*E;
     auto i=make_index("i");
     auto j=make_index("j");
     auto k=make_index("k");
     auto l=make_index("l");
+    using idx_i=make_indices<decltype(i)>;
+    using idx_j=make_indices<decltype(j)>;
+    using idx_ij=make_indices<decltype(i),decltype(j)>;
+    using idx_ji=make_indices<decltype(j),decltype(i)>;
+    using idx_jk=make_indices<decltype(j),decltype(k)>;
+    using idx_ik=make_indices<decltype(i),decltype(k)>;
+    using idx_kj=make_indices<decltype(k),decltype(j)>;
+    using idx_kl=make_indices<decltype(k),decltype(l)>;
 
-    matrix_type _H=_G(i,j)*_E(j,k);
-    tester.test("G * E",H==_H);
+    //Addition
+    eigen_matrix D=A+B;
+    eigen_matrix E=impl.add<idx_ij,idx_ij>(A,B);
+    tester.test("Matrix A+B",D==E);
+    D=A+B+C;
+    E=impl.add<idx_ij,idx_ij>(impl.add<idx_ij,idx_ij>(A,B),C);
+    tester.test("Matrix A+B+C",D==E);
+    D=A+B.transpose();
+    E=impl.add<idx_ij,idx_ji>(A,B);
+    tester.test("Matrix A+B^T",D==E);
+    eigen_vector vD=vA+vB;
+    eigen_vector vE=vimpl.add<idx_i,idx_i>(vA,vB);
+    tester.test("Vector A+B",vD==vE);
+    vD=vA+vB+vC;
+    vE=vimpl.add<idx_i,idx_i>(vimpl.add<idx_i,idx_i>(vA,vB),vC);
+    tester.test("Vector A+B+C",vD==vE);
+    eigen_scalar sD=sA+sB;
+    eigen_scalar sE=simpl.add<idx_i,idx_i>(sA,sB);
+    tester.test("Scalar A+B",sD==sE);
+    sD=sA+sB+sC;
+    sE=simpl.add<idx_i,idx_i>(simpl.add<idx_i,idx_i>(sA,sB),sC);
+    tester.test("Vector A+B+C",vD==vE);
 
-    eigen_matrix I=G.transpose()*E;
-    matrix_type _I=_G(j,i)*_E(j,k);
-    tester.test("G^T * E",I==_I);
+    //Subtraction
+    D=A-B;
+    E=impl.subtract<idx_ij,idx_ij>(A,B);
+    tester.test("Matrix A-B",D==E);
+    D=A-B-C;
+    E=impl.subtract<idx_ij,idx_ij>(impl.subtract<idx_ij,idx_ij>(A,B),C);
+    tester.test("Matrix A-B-C",D==E);
+    D=A-B.transpose();
+    E=impl.subtract<idx_ij,idx_ji>(A,B);
+    tester.test("Matrix A-B^T",D==E);
+    vD=vA-vB;
+    vE=vimpl.subtract<idx_i,idx_i>(vA,vB);
+    tester.test("Vector A-B",vD==vE);
+    vD=vA-vB-vC;
+    vE=vimpl.subtract<idx_i,idx_i>(vimpl.subtract<idx_i,idx_i>(vA,vB),vC);
+    tester.test("Vector A-B-C",vD==vE);
+    sD=sA-sB;
+    sE=simpl.subtract<idx_i,idx_i>(sA,sB);
+    tester.test("Scalar A-B",sD==sE);
+    sD=sA-sB-sC;
+    sE=simpl.subtract<idx_i,idx_i>(simpl.subtract<idx_i,idx_i>(sA,sB),sC);
+    tester.test("Vector A-B-C",vD==vE);
 
-    eigen_matrix J=G*E.transpose();
-    matrix_type _J=_G(i,j)*_E(k,j);
-    tester.test("G * E^T",J==_J);
+    //Scaling
+    D=A*0.5;
+    E=impl.scale<idx_ij>(A,0.5);
+    tester.test("Matrix scale",D==E);
+    vD=vA*0.5;
+    vE=vimpl.scale<idx_i>(vA,0.5);
+    tester.test("Vector scale",vD==vE);
+    sD=sA*0.5;
+    sE=simpl.scale<Indices<>>(sA,0.5);
+    tester.test("Scalar scale",sD==sE);
 
-    eigen_matrix K=G.transpose()*E.transpose();
-    matrix_type _K=_G(j,i)*_E(k,j);
-    tester.test("G^T * E^T",K==_K);
 
-    eigen_matrix M=G.transpose()*E*G;
-    matrix_type _M=_G(j,i)*_E(j,k)*_G(k,l);
-    tester.test("G^T*E*G",M==_M);
-
-    //Fancy basic ops
-    eigen_matrix N=E+E.transpose();
-    matrix_type _N=_E(i,j)+_E(j,i);
-    tester.test("E+E^T",_N==N);
-
-    eigen_matrix O=E-E.transpose();
-    matrix_type _O=_E(i,j)-_E(j,i);
-    tester.test("E-E^T",O==_O);
-
-    //Distribution
-    eigen_matrix P=E*(G+G.transpose());
-    matrix_type _P=_E(i,k)*(_G(k,j)+_G(j,i));
-    tester.test("E*(G+G^T)",_P==P);
-
+    //Contraction
+    D=A*B;
+    E=impl.contraction<idx_ij,idx_jk>(A,B);
+    tester.test("Matrix A * B",D==E);
+    D=A*B.transpose();
+    E=impl.contraction<idx_ij,idx_kj>(A,B);
+    tester.test("Matrix A * B^T",D==E);
+    D=A.transpose()*B;
+    E=impl.contraction<idx_ji,idx_jk>(A,B);
+    tester.test("Matrix A^T * B",D==E);
+    D=A.transpose()*B.transpose();
+    E=impl.contraction<idx_ji,idx_kj>(A,B);
+    tester.test("Matrix A^T * B^T",D==E);
+    D=A.transpose()*B*C;
+    E=impl.contraction<idx_ik,idx_kl>(impl.contraction<idx_ji,idx_jk>(A,B),C);
+    tester.test("Matrix A^T * B * C",D==E);
+    double corr_s=A.cwiseProduct(B).sum();
+    double s=impl.contraction<idx_ij,idx_ij>(A,B);
+    tester.test("A(i,j) * B(i,j)",corr_s==s);
+    corr_s=A.cwiseProduct(B.transpose()).sum();
+    s=impl.contraction<idx_ij,idx_ji>(A,B);
+    tester.test("A(i,j) * B(j,i)",corr_s==s);
+    sD=vA.transpose()*vB;
+    sE=vimpl.contraction<idx_i,idx_i>(vA,vB);
+    tester.test("Vector A^T * B",sD==sE);
+    D=vA*vB.transpose();
+    E=vimpl.contraction<idx_i,idx_j>(vA,vB);
+    tester.test("Vector A * B^T", D==E);
+    D=vA.transpose()*B;
+    E=vimpl.contraction<idx_i,idx_ij>(vA,B);
+    tester.test("A(i) * B(i,j)",D==E);
+    D=vA.transpose()*B.transpose();
+    E=vimpl.contraction<idx_i,idx_ji>(vA,B);
+    tester.test("A(i) * B(j,i)",D==E);
+    D=A*vB;
+    E=impl.contraction<idx_ij,idx_j>(A,vB);
+    tester.test("A(i,j) * B(j)",D==E);
+    D=A.transpose()*vB;
+    E=impl.contraction<idx_ji,idx_j>(A,vB);
+    tester.test("A(j,i) * B(j)",D==E);
+    sD=sA*sB;
+    sE=simpl.contraction<idx_i,idx_i>(sA,sB);
+    tester.test("Scalar A * B", sD==sE);
 
     //Self-adjoint Eigen solver
     eigen_matrix L(2,2);
     L<<1, 2, 2, 3;
     Eigen::SelfAdjointEigenSolver<eigen_matrix> solver(L);
-    matrix_type _L(L);
-    auto eigen_sys=self_adjoint_eigen_solver(_L);
+    auto eigen_sys=impl.self_adjoint_eigen_solver(L);
 
     tester.test("Eigenvalues",eigen_sys.first==solver.eigenvalues());
     tester.test("Eigenvectors",eigen_sys.second==solver.eigenvectors());
 
 
-    const std::array<size_t,1> vshape({dim});
-    eigen_vector vA=eigen_vector::Random(dim),
-                 vB=eigen_vector::Random(dim),
-                 vC=eigen_vector::Random(dim);
-    Shape<1> vcorr_shape(vshape,false);
 
-    //Basic Constructors
-    vector_type vallocated(vshape);
-    tester.test("Vector Allocate dimensions",vallocated.shape()==vcorr_shape);
+//    //Allocator
+//    matrix_type allocated(shape);
+//    tester.test("Allocate dimensions",allocated.shape()==corr_shape);
 
-    //Construction from Eigen Vector
-    vector_type _vA(vA),_vB(vB),_vC(vC);
-    tester.test("Vector Values",_vA==vA);
-
-    auto vmemory=_vA.get_memory();
-    tester.test("Vector Memory shape",vmemory.local_shape==vcorr_shape);
-    tester.test("Vector Memory get",vmemory(3)==vA(3));
-    vmemory(3)=999.9;
-    _vA.set_memory(vmemory);
-    tester.test("Vector Memory set",_vA(3)==999.9);
-    vA(3)=999.9;
-    vector_type vslice=_vA.slice({2},{3});
-    tester.test("Vector Slice shape",vslice.shape()==Shape<1>({1},false));
-    tester.test("Vector Same element",vslice(0)==vA(2));
-
-    eigen_vector vD=vA+vB+vC;
-    vector_type _vD=_vA+_vB+_vC;
-    tester.test("Vector Addition",_vD==vD);
-
-    eigen_vector vE=0.5*vD;
-    vector_type _vE=0.5*_vD;
-    tester.test("Vector Left scale",_vE==vE);
-
-    eigen_vector vF=vD*0.5;
-    vector_type _vF=_vD*0.5;
-    tester.test("Vector Right scale",_vF==vF);
-
-    eigen_vector vG=vA-vB-vC;
-    vector_type _vG=_vA-_vB-_vC;
-    tester.test("Vector Subtraction",vG==_vG);
-
-    eigen_matrix vH=vG.transpose()*vG;
-    EigenScalar<double> _vH=_vG(i)*_vG(i);
-    tester.test("Vector dot",vH==_vH);
-
-    eigen_matrix vI=vG*vG.transpose();
-    matrix_type _vI=_vG(i)*_vG(j);
-    tester.test("Vector outer product",_vI==vI);
-
-    eigen_vector vJ=vG.transpose()*G;
-    vector_type _vJ=_vG(i)*_G(i,j);
-    tester.test("Vector times matrix",vJ==_vJ);
-
-    eigen_vector vK=vG.transpose()*G.transpose();
-    vector_type  _vK=_vG(i)*_G(j,i);
-    tester.test("Vector times matrix^T",_vK==vK);
-
-    eigen_vector vL=G*vG;
-    vector_type _vL=_G(i,j)*_vG(j);
-    tester.test("Matrix times vector",vL==_vL);
-
-    eigen_vector vM=G.transpose()*vG;
-    vector_type _vM=_G(i,j)*_vG(i);
-    tester.test("Matrix^T times vector",vM==_vM);
-
+//    //Distribution
+//    eigen_matrix P=E*(G+G.transpose());
+//    matrix_type _P=_E(i,k)*(_G(k,j)+_G(j,i));
+//    tester.test("E*(G+G^T)",_P==P);
     return tester.results();
 }

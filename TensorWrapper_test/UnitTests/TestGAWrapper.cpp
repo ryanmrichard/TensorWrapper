@@ -23,15 +23,15 @@ int main()
     tensor_type __A(A);
     tester.test("Construct by value",_A==A);
 
-    auto memory=_A.get_memory();
-    const Shape<2> corr_shape(dims,true);
-    tester.test("Memory shape",memory.local_shape==corr_shape);
-    tester.test("Memory get",memory(3,3)==A.get_values(index_t{3,3}));
-    memory(index_t{3,3})=999.9;
-    _A.set_memory(memory);
-    tester.test("Memory set",_A(3,3)==999.9);
-    double temp=999.9;
-    A.set_values(index_t{3,3},index_t{4,4},&temp);
+//    auto memory=_A.get_memory();
+//    const Shape<2> corr_shape(dims,true);
+//    tester.test("Memory shape",memory.local_shape==corr_shape);
+//    tester.test("Memory get",memory(3,3)==A.get_values(index_t{3,3}));
+//    memory(index_t{3,3})=999.9;
+//    _A.set_memory(memory);
+//    tester.test("Memory set",_A(3,3)==999.9);
+//    double temp=999.9;
+//    A.set_values(index_t{3,3},index_t{4,4},&temp);
 
     tensor_type slice=_A.slice({2,1},{3,3});
     tester.test("Slice shape",slice.shape()==Shape<2>({1,2},true));

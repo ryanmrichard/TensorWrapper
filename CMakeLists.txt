@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(TensorWrapper-superbuild CXX)
+project(TensorWrapper-superbuild C CXX)
 include(ExternalProject)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(cmake/cmake_macros.cmake)
@@ -35,11 +35,13 @@ find_package(CBLASLAPACKE REQUIRED)
 option_w_default(ENABLE_Eigen3 TRUE)
 #Enable Global Arrays backend?
 option_w_default(ENABLE_GAXX FALSE)
+#Enable Tiled Array backend?
+option_w_default(ENABLE_tiledarray FALSE)
 
 #List of all backends we know about.  Add new ones here.
-set(XXX "Eigen3" "GAXX")
+set(XXX "Eigen3" "GAXX" "tiledarray")
 
-#BACKENDS is the a sublist of XXX that is only the ones that are turned on.
+#BACKENDS is the sublist of XXX that is only the ones that are turned on.
 foreach(x ${XXX})
     if(${ENABLE_${x}})
         set(BACKENDS ${BACKENDS} ${x})

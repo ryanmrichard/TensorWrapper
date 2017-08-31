@@ -59,7 +59,7 @@ struct ScaleOp: public OperationBase<ScaleOp<LHS_t>>{
     auto eval()const
     {
         TensorWrapperImpl<rank,scalar_type,TT> impl;
-        return impl.scale(lhs_.template eval<TT>(),scalar_);
+        return impl.template scale<indices>(lhs_.template eval<TT>(),scalar_);
     }
 }; //End ScaleOp class
 

@@ -42,22 +42,19 @@ struct TensorWrapperImpl<rank,T,TensorTypes::GlobalArrays> {
         std::transform(end.begin(),end.end(),
                        start.begin(),dims.begin(),std::minus<size_t>());
         Shape<rank> my_shape(dims,true);
-        MemoryFunctor<rank,T> functor(
-            std::move(impl.get_values(start,end)),
-            impl,my_shape
-        );
-        auto fxn=std::bind(&MemoryFunctor<rank,T>::operator(),functor,
-                           std::placeholders::_1);
-        return MemoryBlock<rank,T>(my_shape,end,fxn,start);
+        MemoryBlock<rank,T> rv;
+        std::unique_ptr<T[]> ptr(new T[my_shape.size()]);
+        rv.add_block(std::move(ptr),dims(impl),start,end);
+        return rv;
     }
 
     template<typename Tensor_t>
     void set_memory(Tensor_t& impl,const MemoryBlock<rank,T>& block)const
     {
-        std::vector<T> buffer(block.local_shape.size());
-        for(const auto& idx: block.local_shape)
-            buffer[block.local_shape.flat_index(idx)]=block(idx);
-        impl.set_values(block.start,block.end,buffer.data());
+        for(size_t i=0;i<block.nblocks();++i)
+        {
+            impl.set_values(*block.begin(i),*block.end(i),block.block(i));
+        }
     }
 
     type allocate(const array_t& dims)const{

@@ -2,28 +2,53 @@
 #include <cstddef>
 #include <type_traits>
 
+/** \file This file contains a bunch of meta-templating structs and typedefs to
+ *  help make the rest of the code easier to read.
+ */
+
 namespace TWrapper {
-namespace detail_ {
-enum class TensorTypes;
-}
 
-template<size_t R, typename T, detail_::TensorTypes TT>
-class TensorWrapper;
+//Forward declarations we'll need start here
+namespace detail_ {enum class TensorTypes;}
 
-template<size_t R,typename T>
-class TensorWrapperBase;
+template<size_t R, typename T, detail_::TensorTypes TT> class TensorWrapper;
+
+template<size_t R,typename T> class TensorWrapperBase;
 
 namespace detail_ {
 
-template<typename T>
-class OperationBase;
+template<typename T> class OperationBase;
+
+//Meta-templating stuff starts here
+
+/** \brief Type for enabling a function if the two backends are \b not the same
+ *
+ *  If \p TT1 and \p TT2 are \b not the same this type will contain a typedef
+ *  called \p type.  If it exists, \p type will be a typedef of int.  Hence
+ *  starting a template function defintion with:
+ *
+ *  \code
+ *  template<TensorTypes TT1, TensorTypes TT2,
+ *           typename EnableIfNotSameBackend<TT1,TT2>::type=0>
+ *  \endcode
+ *
+ *  will leverage SFINAE to enable an overload of the subsequent function only
+ *  if the two backends are \p not the same.
+ *
+ *  \tparam TT1 The enum of the first backend
+ *  \tparam TT2 The enum of the other backend
+ */
+template<TensorTypes TT1, TensorTypes TT2>
+using EnableIfNotSameBackend=std::enable_if<TT1!=TT2,int>;
 
 ///A type for discerning the rank and scalar type of a tensor
 template<typename tensor_t>
 struct TensorTraits{
+    ///\p value is true if tensor_t is a TensorWrapper tensor
     constexpr static bool value=false;
 };
 
+///Partial specialization for the common base class
 template<size_t R, typename T>
 struct TensorTraits<TWrapper::TensorWrapperBase<R,T>>
 {

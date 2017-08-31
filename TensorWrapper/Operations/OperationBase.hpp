@@ -6,7 +6,6 @@ namespace detail_ {
 ///A type for when we are getting something that does not have indices
 struct IdxNotSet{};
 
-
 template<typename Derived_t>
 struct OperationBase{
 

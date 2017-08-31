@@ -22,9 +22,14 @@ int main(int argc, char** argv)
     Tester tester("Stress Testing Eigen Tensor Wrapping");
     const size_t dim=argc>1?atoi(argv[1]):10000;
     const int nthreads=omp_get_max_threads();
-    std::cout<<"Nthreads "<<nthreads<<std::endl;
     Eigen::ThreadPool pool(nthreads);
     Eigen::ThreadPoolDevice my_device(&pool,nthreads);
+    auto i=make_index("i");
+    auto j=make_index("j");
+    auto k=make_index("k");
+    auto l=make_index("l");
+    {
+
     const std::array<size_t,2> dims({dim,dim});
     tensor_type _A(dims),_B(dims),_C(dims);
     FillRandom(_A);
@@ -56,10 +61,7 @@ int main(int argc, char** argv)
     auto contract1=A.contract(B,idx_array<1>{idx_t{1,0}});
     D.device(my_device)=contract1.contract(C,idx_array<1>{idx_t{1,0}});
     eigen_time=timer.get_time();
-    auto i=make_index("i");
-    auto j=make_index("j");
-    auto k=make_index("k");
-    auto l=make_index("l");
+
 
     timer.reset();
     _D=_A(i,k)*_B(k,l)*_C(l,j);
@@ -77,6 +79,30 @@ int main(int argc, char** argv)
     wrapper_time=timer.get_time();
     print_times("A^T*B*C",eigen_time,wrapper_time);
     tester.test("A^T*B*C",D==_D);
+    }
+
+    std::array<size_t,3> dims({dim,dim,dim});
+    EigenTensor<3,double> _A(dims),_B(dims),_C(dims);
+    FillRandom(_A);
+    FillRandom(_B);
+    FillRandom(_C);
+    Tensor<double,3> A=_A.data(),B=_B.data(),C=_C.data(),D(dim,dim,dim);
+
+    Timer timer;
+    //A(i,j,k)*B(i,k,l)=Temp(j,l)
+    auto contract1=A.contract(B,idx_array<2>{idx_t{0,0},idx_t{2,1}});
+    //Temp(j,l)*C(m,l,n)=D(j,m,n)
+    D.device(my_device)=contract1.contract(C,idx_array<1>{idx_t{1,1}});
+    double eigen_time=timer.get_time();
+
+    auto m=make_index("m");
+    auto n=make_index("n");
+    timer.reset();
+    EigenTensor<3,double> _D=_A(i,j,k)*_B(i,k,l)*_C(m,l,n);
+    double wrapper_time=timer.get_time();
+    print_times("A(i,j,k)*B(i,k,l)*C(m,l,n)",eigen_time,wrapper_time);
+    tester.test("A(i,j,k)*B(i,k,l)*C(m,l,n)",_D==D);
+
 
     return tester.results();
 }

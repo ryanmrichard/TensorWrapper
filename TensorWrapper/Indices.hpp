@@ -632,7 +632,23 @@ constexpr auto get_dummy(const LHS_t& lhs, const RHS_t& rhs)noexcept
    return get_dummy_impl(lhs,rhs,std::make_index_sequence<lcommon>());
 }
 
+template<char...Cs>
+std::string stringify_impl(C_String<Cs...>)
+{
+    char str[]={Cs...};
+    return std::string(str);
+}
 
+template<typename...Args>
+std::string stringify(const Indices<Args...>&)
+{
+    std::array<std::string,sizeof...(Args)> buffer{stringify_impl(Args())...};
+    std::string rv;
+    for(size_t i=0;i<buffer.size()-1;++i)
+        rv+=buffer[i]+",";
+    rv+=buffer[buffer.size()-1];
+    return rv;
+}
 
 
 }}//End namespaces

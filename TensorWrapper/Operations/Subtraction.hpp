@@ -28,6 +28,9 @@ struct SubtractionOp : public OperationBase<SubtractionOp<LHS_t,RHS_t>> {
     ///The tensor on the left side of the - sign
     LHS_t lhs_;
 
+    ///The tensor on the right side of the - sign
+    RHS_t rhs_;
+
     ///The rank of the two tensors involved in the subtraction
     constexpr static size_t rank=LHS_t::rank;
 
@@ -37,11 +40,6 @@ struct SubtractionOp : public OperationBase<SubtractionOp<LHS_t,RHS_t>> {
     ///The indices after subtracting
     using indices=typename LHS_t::indices;
 
-    ///The type of the RHS after permuting
-    using permute_t=Permutation<indices,typename RHS_t::indices,RHS_t>;
-
-    ///The tensor on the right side of the - sign
-    permute_t rhs_;
 
     /** \brief Makes a new SubtractionOp by copying the tensors on the two sides
      *  of the - sign.
@@ -70,8 +68,9 @@ struct SubtractionOp : public OperationBase<SubtractionOp<LHS_t,RHS_t>> {
     auto eval()const
     {
         TensorWrapperImpl<rank,scalar_type,TT> impl;
-        return impl.subtract(lhs_.template eval<TT>(),
-                             rhs_.template eval<TT>());
+        return impl.template subtract<typename LHS_t::indices,
+                                      typename RHS_t::indices>(
+                    lhs_.template eval<TT>(),rhs_.template eval<TT>());
     }
 };
 

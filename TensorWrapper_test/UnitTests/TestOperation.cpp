@@ -9,9 +9,6 @@
  *
  */
 
-
-
-
 namespace TWrapper {
 namespace detail_ {
 
@@ -25,7 +22,7 @@ struct Convert<Eigen::MatrixXd> :
         public OperationBase<Convert<Eigen::MatrixXd>>
 {
    using scalar_type=double;
-   using indices=IdxNotSet;
+   using indices=detail_::Indices<detail_::C_String<'i','\0'>>;
    constexpr static size_t rank=2;
    const Eigen::MatrixXd& tensor_;
 
@@ -35,7 +32,7 @@ struct Convert<Eigen::MatrixXd> :
 
    std::array<size_t,2> dimensions()const
    {
-       return {tensor_.rows(),tensor_.cols()};
+       return {(size_t)tensor_.rows(),(size_t)tensor_.cols()};
    }
 
    template<TensorTypes>
@@ -65,16 +62,14 @@ int main()
     Eigen::MatrixXd valuex2=value+value;
     Eigen::MatrixXd valuex32=value*3.2;
 
-    //Convert Op (use Eigen::Matrix3d to test the primary template)
-//    Eigen::Vector3d value2;
-//    Convert<Eigen::Vector3d> convert(value2);
-//    Convert<const Eigen::Vector3d> cconvert(value2);
-//    auto& held_value=convert.eval<type>();
-//    tester.test("Convert eval",&held_value==&value2);
-//    const auto& cheld_value=cconvert.eval<type>();
-//    tester.test("const Convert eval",&cheld_value==&value2);
-
-//    //TODO: test when a conversion actually happens
+    //IndexedTensor
+    auto i=make_index("i");
+    auto j=make_index("j");
+    auto k=make_index("k");
+    auto l=make_index("l");
+    using Index_t=Indices<decltype(i),decltype(j)>;
+    using Index_t2=Indices<decltype(j),decltype(k)>;
+    using Index_t3=Indices<decltype(k),decltype(l)>;
 
     //AddOp
     Convert<Eigen::MatrixXd> mat(value);
@@ -96,14 +91,7 @@ int main()
     tester.test("Subtraction dims",corr_dims==sub.dimensions());
     tester.test("Subtraction",result3==value);
 
-    //IndexedTensor
-    auto i=make_index("i");
-    auto j=make_index("j");
-    auto k=make_index("k");
-    auto l=make_index("l");
-    using Index_t=Indices<decltype(i),decltype(j)>;
-    using Index_t2=Indices<decltype(j),decltype(k)>;
-    using Index_t3=Indices<decltype(k),decltype(l)>;
+
     IndexedTensor<double,Convert<Eigen::MatrixXd>,Index_t> indices(mat);
     tester.test("Indexed Tensor dims",corr_dims==indices.dimensions());
     tester.test("Indexed Tensor eval",&(indices.eval<type>())==&value);
