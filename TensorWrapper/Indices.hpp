@@ -650,5 +650,31 @@ std::string stringify(const Indices<Args...>&)
     return rv;
 }
 
+template<size_t R>
+struct GenericIndexBase;
+
+template<size_t R>
+struct GenericIndexBase:public GenericIndexBase<R-1> {
+    using base_t=GenericIndexBase<R-1>;
+    static constexpr char value=static_cast<char>(R);
+    using my_idx=C_String<value,'\0'>;
+    using type=typename MakeUnion<my_idx,typename base_t::type>::type;
+};
+
+template<>
+struct GenericIndexBase<0>{
+    static constexpr char value=static_cast<char>(0);
+    using type=make_indices<C_String<value,'\0'>>;
+};
+
+template<size_t R>
+struct GenericIndex{
+    using type=typename GenericIndexBase<R-1>::type;
+};
+
+template<>
+struct GenericIndex<0>{
+    using type=Indices<>;
+};
 
 }}//End namespaces

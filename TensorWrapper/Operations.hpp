@@ -22,7 +22,8 @@
 
 /** \brief \relates AddOp
  *
- * Provides the syntactic sugar for adding tensors together.
+ * Provides the syntactic sugar for adding non-indexed tensors together.
+ *
  *
  */
 template<typename LHS_t, typename RHS_t,
@@ -30,8 +31,12 @@ template<typename LHS_t, typename RHS_t,
 auto operator+(const TWdet::OperationBase<LHS_t>& lhs,
                const RHS_t& rhs)
 {
-    return TWdet::AddOp<LHS_t,TWdet::Convert<RHS_t>>(lhs.cast(),
-                                              TWdet::Convert<RHS_t>(rhs));
+    using convert_t=TWdet::Convert<RHS_t>;
+    using index_t=typename TWdet::GenericIndex<RHS_t::rank()>::type;
+    using newr_t=TWdet::IndexedTensor<typename LHS_t::scalar_type,
+                                      convert_t,index_t>;
+    return TWdet::AddOp<LHS_t,newr_t>(lhs.cast(),
+                              newr_t(TWdet::Convert<RHS_t>(rhs)));
 }
 
 /** \brief \relates AddOp
@@ -52,8 +57,11 @@ template<typename LHS_t, typename RHS_t,
 auto operator-(const TWdet::OperationBase<LHS_t>& lhs,
                const RHS_t& rhs)
 {
-    return TWdet::SubtractionOp<LHS_t,TWdet::Convert<RHS_t>>(lhs.cast(),
-                                             TWdet::Convert<RHS_t>(rhs));
+    using convert_t=TWdet::Convert<RHS_t>;
+    using index_t=typename TWdet::GenericIndex<RHS_t::rank()>::type;
+    using newr_t=TWdet::IndexedTensor<typename LHS_t::scalar_type,convert_t,index_t>;
+    return TWdet::SubtractionOp<LHS_t,newr_t>(lhs.cast(),
+                              newr_t(TWdet::Convert<RHS_t>(rhs)));
 }
 
 

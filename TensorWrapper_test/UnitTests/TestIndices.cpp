@@ -260,5 +260,11 @@ int main()
      static_assert(are_equal(Idx2.get_map(Idx3),map23),"Idx2 map to Idx3");
      static_assert(are_equal(Idx3.get_map(Idx2),map32),"Idx3 map to Idx2");
 
+     using generic_idx=make_indices<C_String<static_cast<char>(2),'\0'>,
+                                    C_String<static_cast<char>(1),'\0'>,
+                                    C_String<static_cast<char>(0),'\0'>>;
+     static_assert(std::is_same<generic_idx,typename GenericIndex<3>::type>
+                   ::value,"Make generic index");
+
     return tester.results();
 }

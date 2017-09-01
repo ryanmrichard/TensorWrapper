@@ -15,7 +15,7 @@ void print_times(const std::string& msg, double eigen_time, double twtime)
 int main(int argc, char** argv)
 {
     Tester tester("Stress Testing TiledArray Wrapping");
-    const size_t dim=argc>1?atoi(argv[1]):10000;
+    const size_t dim=argc>1?atoi(argv[1]):10;
     const size_t nblocks=10;
     if(!dim%nblocks)
         throw std::runtime_error("length is not evenly divisible by nblocks");

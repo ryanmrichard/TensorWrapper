@@ -20,7 +20,7 @@ void print_times(const std::string& msg, double eigen_time, double twtime)
 int main(int argc, char** argv)
 {
     Tester tester("Stress Testing Eigen Tensor Wrapping");
-    const size_t dim=argc>1?atoi(argv[1]):10000;
+    const size_t dim=argc>1?atoi(argv[1]):10;
     const int nthreads=omp_get_max_threads();
     Eigen::ThreadPool pool(nthreads);
     Eigen::ThreadPoolDevice my_device(&pool,nthreads);

@@ -16,7 +16,7 @@ void print_times(const std::string& msg, double eigen_time, double twtime)
 int main(int argc, char** argv)
 {
     Tester tester("Stress Testing Eigen Matrix Wrapping");
-    const size_t dim=argc>1?atoi(argv[1]):10000;
+    const size_t dim=argc>1?atoi(argv[1]):10;
     const std::array<size_t,2> dims({dim,dim});
     MatrixXd A=MatrixXd::Random(dim,dim),
             B=MatrixXd::Random(dim,dim),

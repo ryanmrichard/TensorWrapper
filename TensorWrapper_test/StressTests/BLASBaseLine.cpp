@@ -15,7 +15,7 @@ int main(int argc, char** argv)
 {
     Tester tester("Establishing BLAS base lines");
     srand (time(NULL));
-    const int dim=argc>1?atoi(argv[1]):10000;
+    const int dim=argc>1?atoi(argv[1]):10;
     const int dim2=dim*dim;
     std::vector<double> A(dim2),B(dim2),C(dim2);
     for(size_t i=0;i<dim2;++i)

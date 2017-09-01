@@ -5,7 +5,6 @@
 
 namespace TWrapper {
 
-
 /** \brief  The common base class of all the various implementations.
  *
  *  By time we are in this class we can't actually return values because we
@@ -31,9 +30,12 @@ protected:
     pTensor tensor_;
 
     ///The type of an operation that converts the type-erased pointer
+    template<typename Index_t=typename detail_::GenericIndex<R>::type>
     auto de_ref_op()const
     {
-        return detail_::Convert<pTensor>(tensor_,shape().dims());
+        using Convert_t=detail_::Convert<pTensor>;
+        return detail_::IndexedTensor<T,Convert_t,Index_t>(
+                    Convert_t(tensor_,shape().dims()));
     }
 
     /** \brief Constructor used by derived classes after wrapping a tensor.
@@ -100,7 +102,7 @@ public:
     virtual ~TensorWrapperBase()=default;
 
     ///Returns the rank of the wrapped tensor
-    constexpr size_t rank()const{return R;}
+    static constexpr size_t rank(){return R;}
 
     ///Returns the shape of the wrapped tensor
     virtual Shape<R> shape()const=0;
@@ -177,7 +179,31 @@ public:
 
     /** \brief Starts the lazy evaluation chain when first operation is addition
      *
-     *  This overload allows
+     *  This function allows for two tensors to be added without specifying
+     *  their indices.  For example via:
+     *
+     *  \code
+     *  TensorWrapper A,B,C;
+     *  C=A+B;
+     *  \endcode
+     *
+     *  If indices are not included, it is assumed that all tensors have the
+     *  same indices.  For example the above code is interpreted as being the
+     *  same as:
+     *
+     *  \code
+     *  TensorWrapper A,B,C;
+     *  auto i=make_index("i");
+     *  auto j=make_index("j");
+     *  C=A(i,j)+B(i,j);
+     *  \endcode
+     *
+     *  \param[in] rhs The tensor or tensor expression to add to this tensor.
+     *
+     *  \tparam RHS_t The type of \p rhs.  Expected to be a TensorWrapper or
+     *          TensorWrapperBase instance for the same backend or a lazy
+     *          evaluation expression involving tensors satisfying this
+     *          condition.
      *
      */
     template<typename RHS_t>
@@ -208,7 +234,7 @@ public:
 
         //constexpr auto counts=Index_t::get_counts();
 
-        return detail_::IndexedTensor<T,decltype(de_ref_op()),Index_t>(de_ref_op());
+        return de_ref_op<Index_t>();
     }
 };
 

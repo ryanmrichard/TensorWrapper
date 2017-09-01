@@ -5,11 +5,10 @@
  *  classes.  We test them together because one cannot make a usable
  *  TensorWrapperBase instance without going through the TensorWrapper API.
  *
- *  These tests focus on the correctness of the class and not its math aspects.
- *  What we mean by this is these are tests of the constructors, copy/move, etc.
- *  and not the add, multiply, etc. operations.  For the most part the
- *  operations tested here are backend agnostic (they will assume the backend
- *  can be copied correctly).
+ *  These tests use the Eigen backend, but given that TensorWrapper goes through
+ *  the TensorWrapperImpl API regardless of backend (and that each of those
+ *  wrappings is tested elsewhere) this test passing should really reflect that
+ *  our API is working regardless of backend.
  *
  */
 

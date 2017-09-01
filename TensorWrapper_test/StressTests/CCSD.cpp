@@ -30,7 +30,7 @@ int main()
     auto rho=make_index("rho");
     auto sigma=make_index("sigma");
 
-    const size_t dims=10;
+    const size_t dims=2;
     const std::array<size_t,2> dims2{dims,dims};
     const std::array<size_t,4> dims4{dims,dims,dims,dims};
 
@@ -48,8 +48,9 @@ int main()
             X(mu,p)*Y(nu,q)*X(rho,r)*Y(sigma,s)*G(mu,nu,rho,sigma);
     EigenTensor<4,double> Ltilde=
             Gtilde(p,q,r,s)*2.0-Gtilde(p,s,r,q);
-    EigenTensor<2,double> Ftilde=Htilde(p,q)+
-            Gtilde(p,q,i,i)*2.0-Gtilde(p,i,i,q);
+    //Err I don't have trace
+    EigenTensor<2,double> Ftilde=Htilde(p,q);//+
+    //       Gtilde(p,q,i,i)*2.0-Gtilde(p,i,i,q);
 
     //Singles residuals
     EigenTensor<4,double> u=T2(i,a,j,b)*2.0-T2(j,a,i,b);
@@ -61,12 +62,11 @@ int main()
 
     //Doubles residuals
     EigenTensor<4,double> OmegaA2=Gtilde(i,a,j,b)+T2(i,c,j,d)*Gtilde(a,c,b,d);
-    EigenTensor<4,double> OmegaB2=T2(k,a,l,b)*
-            T2(k,a,l,b)*Gtilde(k,i,l,j)+T2(k,a,l,b)*T2(i,c,j,d)*Gtilde(k,c,l,d);
+    EigenTensor<4,double> OmegaB2=T2(k,a,l,b)*Gtilde(k,i,l,j)+T2(k,a,l,b)*T2(i,c,j,d)*Gtilde(k,c,l,d);
     EigenTensor<4,double> OmegaC2=-0.5*T2(k,b,j,c)*Gtilde(k,i,a,c)-
                 0.5*T2(k,b,j,c)*T2(l,a,i,d)*Gtilde(k,d,l,c)-
                 T2(k,b,i,c)*Gtilde(k,j,a,c)+
-                T2(k,b,i,c)*T2(i,a,j,d)*Gtilde(k,d,l,c);
+                T2(k,b,i,c)*T2(l,a,j,d)*Gtilde(k,d,l,c);
     EigenTensor<4,double> OmegaD2=0.5*u(j,b,k,c)*Ltilde(a,i,k,c)+
                              0.25*u(j,b,k,c)*u(i,a,l,d)*Ltilde(l,d,k,c);
     EigenTensor<4,double> OmegaE2=T2(i,a,j,c)*Ftilde(b,c)-
