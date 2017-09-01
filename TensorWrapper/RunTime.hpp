@@ -1,6 +1,10 @@
 #pragma once
 #include "TensorImpls.hpp"
 
+/** \file Contains the definition and implementation of the RunTime class.
+ *
+ */
+
 namespace TWrapper {
 
 /** \brief A class for holding the details of the run time enviornment.
