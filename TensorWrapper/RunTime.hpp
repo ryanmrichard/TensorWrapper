@@ -1,6 +1,6 @@
 #pragma once
 #include "TensorImpls.hpp"
-
+#include <mpi.h>
 /** \file Contains the definition and implementation of the RunTime class.
  *
  */
