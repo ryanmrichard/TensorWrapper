@@ -2,7 +2,6 @@
 #include "TestHelpers.hpp"
 
 using namespace TWrapper;
-using namespace TiledArray;
 using tensor_type=TensorWrapper<2,double,detail_::TensorTypes::TiledArray>;
 
 void print_times(const std::string& msg, double eigen_time, double twtime)
@@ -27,6 +26,7 @@ int main(int argc, char** argv)
     auto k=make_index("k");
     auto l=make_index("l");
 #ifdef ENABLE_tiledarray
+    using namespace TiledArray;
     TA::World& world = TA::get_default_world();
     {
     const std::array<size_t,2> dims({dim,dim});
