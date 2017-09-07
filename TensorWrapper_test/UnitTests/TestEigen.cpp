@@ -72,6 +72,7 @@ int main()
     auto k=make_index("k");
     auto l=make_index("l");
     using idx_i=make_indices<decltype(i)>;
+    using idx_ii=make_indices<decltype(i),decltype(i)>;
     using idx_j=make_indices<decltype(j)>;
     using idx_ij=make_indices<decltype(i),decltype(j)>;
     using idx_ji=make_indices<decltype(j),decltype(i)>;
@@ -137,6 +138,10 @@ int main()
     sE=simpl.scale<Indices<>>(sA,0.5);
     tester.test("Scalar scale",sD==sE);
 
+    //Trace
+    double x=A.trace();
+    double y=impl.trace<idx_ii>(A);
+    tester.test("Trace of A",x==y);
 
     //Contraction
     D=A*B;

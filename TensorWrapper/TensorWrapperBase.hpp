@@ -5,6 +5,11 @@
 
 namespace TWrapper {
 
+template<typename...Args>
+struct IndexHelper{
+    static constexpr bool value=detail_::AllUnique<Args...>::value;
+};
+
 /** \brief  The common base class of all the various implementations.
  *
  *  By time we are in this class we can't actually return values because we
@@ -37,6 +42,36 @@ protected:
         return detail_::IndexedTensor<T,Convert_t,Index_t>(
                     Convert_t(tensor_,shape().dims()));
     }
+
+    ///The type of an operation that converts the type-erased pointer and traces
+    template<typename Index_t>
+    auto de_ref_with_tr()const
+    {
+        using Nested_t=decltype(de_ref_op<Index_t>());
+        //return de_ref_op<Index_t>();
+        return detail_::Trace<Nested_t>(de_ref_op<Index_t>());
+    }
+
+    template<bool good,typename Index_t>
+    struct DeRefHelper;
+
+    template<typename Index_t>
+    struct DeRefHelper<true,Index_t>{
+        template<typename This_t>
+        static auto eval(const This_t* t)
+        {
+            return t->de_ref_op<Index_t>();
+        }
+    };
+
+    template<typename Index_t>
+    struct DeRefHelper<false,Index_t>{
+        template<typename This_t>
+        static auto eval(const This_t* t)
+        {
+            return t->de_ref_with_tr<Index_t>();
+        }
+    };
 
     /** \brief Constructor used by derived classes after wrapping a tensor.
      *
@@ -224,17 +259,16 @@ public:
     }
 
 
-    ///API for contraction
+
+    /** \brief API for associating a set of indices with a tensor
+     *
+     */
     template<char...Chars,typename...Args>
     constexpr auto operator()(const detail_::C_String<Chars...>&,Args...)const
     {
         static_assert(sizeof...(Args)+1==R,"#indices != rank");
-        using Index_t=
-            detail_::make_indices<detail_::C_String<Chars...>,Args...>;
-
-        //constexpr auto counts=Index_t::get_counts();
-
-        return de_ref_op<Index_t>();
+        using Index_t=detail_::make_indices<detail_::C_String<Chars...>,Args...>;
+        return DeRefHelper<IndexHelper<Index_t>::value,Index_t>::eval(this);
     }
 };
 

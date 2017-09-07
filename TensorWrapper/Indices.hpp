@@ -508,6 +508,22 @@ public:
 template<typename...OtherIndxs>
 using make_indices=Indices<OtherIndxs...>;
 
+template<typename T>
+struct IndicesFromTuple;
+
+template<typename...Args>
+struct IndicesFromTuple<std::tuple<Args...>>{
+    using type=make_indices<Args...>;
+};
+
+template<typename T>
+struct IndicesToTuple;
+
+template<typename...Args>
+struct IndicesToTuple<Indices<Args...>>{
+    using type=std::tuple<Args...>;
+};
+
 template<typename LHS_t, typename RHS_t>
 struct MakeUnion{};
 

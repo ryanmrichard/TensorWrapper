@@ -81,5 +81,6 @@ int main()
     static_assert(std::is_convertible<
                   typename EnableIfOpOrTW<TW>::type,int>::value,
                   "Failed to find a TW");
+
     return tester.results();
 }

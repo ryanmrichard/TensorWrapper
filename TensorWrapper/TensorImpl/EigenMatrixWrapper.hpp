@@ -317,6 +317,13 @@ struct TensorWrapperImpl<R,T,TensorTypes::EigenMatrix> {
         return ContractionImpl<R>::template eval<LHS_Idx,RHS_Idx>(lhs,rhs);
     }
 
+    template<typename LHS_Idx,typename LHS_t>
+    auto trace(const LHS_t& lhs)const
+    {
+        static_assert(LHS_Idx().size()==2,"Trace only available for matrix");
+        return lhs.trace();
+    }
+
     template<typename My_t>
     auto self_adjoint_eigen_solver(const My_t& tensor)const
     {
