@@ -26,12 +26,9 @@ set(TENSORWRAPPER_LIBRARIES ${CBLAS_LIBRARIES}
 
 
 #Find external dependencies
-foreach(pkg @BACKENDS@)
+foreach(pkg @BACKENDS_ON@)
     find_package(${pkg} REQUIRED)
     STRING(TOUPPER ${pkg} PKG)
-    set(TENSORWRAPPER_DEFINITIONS ${TENSORWRAPPER_DEFINITIONS}
-                                          "-DENABLE_${pkg}"
-                                          "${${PKG}_DEFINITIONS}")
     set(TENSORWRAPPER_LIBRARIES ${TENSORWRAPPER_LIBRARIES}
                                      ${${PKG}_LIBRARIES})
     set(TENSORWRAPPER_INCLUDE_DIRS ${TENSORWRAPPER_INCLUDE_DIRS}
@@ -43,10 +40,8 @@ endforeach()
 target_link_libraries(TensorWrapper INTERFACE ${TENSORWRAPPER_LIBRARIES})
 target_include_directories(TensorWrapper INTERFACE
                                                   ${TENSORWRAPPER_INCLUDE_DIRS})
-target_compile_definitions(TensorWrapper INTERFACE ${TENSORWRAPPER_DEFINITIONS})
 
 #Log what we found/are doing
 message(STATUS "TensorWrapper includes: ${TENSORWRAPPER_INCLUDE_DIRS}")
 message(STATUS "TensorWrapper libraries: ${TENSORWRAPPER_LIBRARIES}")
-message(STATUS "TensorWrapepr defintions: ${TENSORWRAPPER_DEFINITIONS}")
 

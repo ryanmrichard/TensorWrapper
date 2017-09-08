@@ -30,7 +30,7 @@ are a variety of resources for using and extending the TensorWrapper library.
 
 [QuickStart](dox/QuickStart.md)
 
-[Supported Tensor Library Backends](/dox/SupportedBackends.md)
+[Linear Algebra API](dox/LinAlg.md)
 
 <!-- Links -->
 [supported backends]: /dox/SupportedBackends.md

@@ -1,4 +1,5 @@
 set(GA_PREFIX ${CMAKE_BINARY_DIR}/external/GlobalArraysTemp_external-prefix)
+enable_language(Fortran)
 find_package(MPI REQUIRED)
 ExternalProject_Add(GAXX_external
     GIT_REPOSITORY https://github.com/ryanmrichard/ga

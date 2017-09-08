@@ -100,17 +100,23 @@ struct TensorWrapperImpl<rank,T,TensorTypes::GlobalArrays> {
     }
 
     ///Adds to the tensor
-    template<typename LHS_t,typename RHS_t>
+    template<typename LHS_Idx,typename RHS_Idx,
+             typename LHS_t,typename RHS_t>
     auto add(const LHS_t& lhs,const RHS_t&rhs)const
     {
-        return lhs+rhs;
+        if(std::is_same<LHS_Idx,RHS_Idx>::value)
+            return lhs+rhs;
+        return lhs+rhs.transpose();
     }
 
     ///Subtracts from the tensor
-    template<typename LHS_t,typename RHS_t>
+    template<typename LHS_Idx,typename RHS_Idx,
+             typename LHS_t,typename RHS_t>
     auto subtract(const LHS_t& lhs,const RHS_t&rhs)const
     {
-        return lhs-rhs;
+        if(std::is_same<LHS_Idx,RHS_Idx>::value)
+            return lhs-rhs;
+        return lhs-rhs.transpose();
     }
 
     ///Contraction
