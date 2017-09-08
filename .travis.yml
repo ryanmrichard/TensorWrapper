@@ -24,6 +24,7 @@ install:
 - cd build && make install
 - cd ${TRAVIS_BUILD_DIR}
 script:
+- ls ${HOME}/include/eigen3
 - cmake
   -H.
   -Bbuild
