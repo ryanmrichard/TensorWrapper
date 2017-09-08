@@ -27,16 +27,25 @@ int main()
     EigenMatrix<double> B(_A);
     auto& wrapped=B.data();
     tester.test("Construct from native instance",wrapped==_A);
-    tester.test("Equality comparison",A==A);
-    tester.test("Equality b/w TW and native",A==_A);
-    tester.test("Equality between native and TW",_A==A);
-    tester.test("Inequality",!(A!=A));
+
+    A=B;
+    tester.test("Assignment",B.data()==wrapped);
+    tester.test("Assignment copies",&wrapped!=&(A.data()));
 
     TensorWrapperBase<2,double>& base=B;
     auto pclone=base.clone();
+
+    //Down cast because we have a TW base instance and we want to test TW API
     EigenMatrix<double>& clone=static_cast<EigenMatrix<double>&>(*pclone);
     tester.test("Clone through base reference",clone.data()==wrapped);
     tester.test("Clone is copy",&(clone.data())!=&wrapped);
+
+    tester.test("Equality comparison",A==B);
+    tester.test("Equality b/w TW and native",B==_A);
+    tester.test("Equality b/w native and TW",_A==B);
+    tester.test("Inequality",!(A!=B));
+    tester.test("Inequality b/w TW and native",!(B!=_A));
+    tester.test("Inequality b/w native and TW",!(_A!=B));
 
     EigenMatrix<double> copy_of_B(B);
     tester.test("Copy constructor",copy_of_B.data()==wrapped);
@@ -45,13 +54,8 @@ int main()
     EigenMatrix<double> movedB(std::move(B));
     tester.test("Move constructor",&(movedB.data())==&wrapped);
 
-    B=movedB;
-    tester.test("Assignment",B.data()==wrapped);
-    tester.test("Assignment copies",&(B.data())!=&wrapped);
-
     B=std::move(movedB);
     tester.test("Move assignment",&(B.data())==&wrapped);
-
 
     EigenTensor<2,double> C(index_t{10,10});
     fill_random(C);
@@ -61,17 +65,16 @@ int main()
     {
         auto& d=D.data();
         auto& c=C.data();
-        tester.test("Conversion copies",&d!=&c);
-        tester.test("Converted",std::equal(d.begin(),d.end(),c.begin()));
+        tester.test("Converted",std::equal(d.data(),d.data()+100,c.data()));
     }
 
     C=D;
     {
         auto& d=D.data();
         auto& c=C.data();
-        tester.test("Conversion assignment copies",&d!=&c);
-        tester.test("Conversion assign",std::equal(d.begin(),d.end(),c.begin()));
+        tester.test("Convt assign",std::equal(d.data(),d.data()+100,c.data()));
     }
+
     Shape<2> corr_shape(index_t{10,10},false);
     tester.test("Get shape",A.shape()==corr_shape);
 
@@ -103,20 +106,20 @@ int main()
     E=A+B;
     tester.test("Addition w/o indices",E==F);
     E=A(i,j)+B(j,i);
-    F=A+B.transpose();
+    F=A.data()+B.data().transpose();
     tester.test("Addition w/ transpose",E==F);
 
     E=A(i,j)-B(i,j);
-    F=A-B;
+    F=A.data()-B.data();
     tester.test("Subtraction w/ indices",E==F);
     E=A-B;
     tester.test("Subtraction w/o indices",E==F);
     E=A(i,j)-B(j,i);
-    F=A-B.transpose();
+    F=A.data()-B.data().transpose();
     tester.test("Subtraction w/ transpose",E==F);
 
     E=0.5*A(i,j);
-    F=0.5*A;
+    F=0.5*A.data();
     tester.test("Left scale w/indices",E==F);
     E=0.5*A;
     tester.test("Left scale w/o indices",E==F);
@@ -126,12 +129,12 @@ int main()
     tester.test("Right scale w/o indices",E==F);
 
     E=A(i,j)*B(j,k);
-    F=A*B;
+    F=A.data()*B.data();
     tester.test("Contraction",E==F);
 
     EigenScalar<double> G=A(i,i);
-    double h=A.trace();
-    tester.test("Trace",G(0,0)==h);
+    double h=A.data().trace();
+    tester.test("Trace",G(std::array<size_t,0>{})==h);
 
 
 

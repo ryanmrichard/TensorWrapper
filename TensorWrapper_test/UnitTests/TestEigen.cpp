@@ -5,7 +5,7 @@ using namespace TWrapper;
 using namespace TWrapper::detail_;
 using eigen_matrix=Eigen::MatrixXd;
 using eigen_vector=Eigen::VectorXd;
-using eigen_scalar=Eigen::Matrix<double,1,1>;
+using eigen_scalar=double;
 
 template<size_t R>
 using impl_t=TensorWrapperImpl<R,double,TensorTypes::EigenMatrix>;
@@ -23,9 +23,9 @@ int main()
     eigen_vector vA=eigen_vector::Random(dim),
                  vB=eigen_vector::Random(dim),
                  vC=eigen_vector::Random(dim);
-    eigen_scalar sA=eigen_scalar::Random(1),
-                 sB=eigen_scalar::Random(1),
-                 sC=eigen_scalar::Random(1);
+    eigen_scalar sA=vA(0),
+                 sB=vB(0),
+                 sC=vC(0);
     impl_t<2> impl;
     impl_t<1> vimpl;
     impl_t<0> simpl;
@@ -47,7 +47,7 @@ int main()
     tester.test("Vector pointer",vmem.block(0)==vA.data());
     auto smem=simpl.get_memory(sA);
     tester.test("Scalar NBlocks",smem.nblocks()==1);
-    tester.test("Scalar pointer",smem.block(0)==sA.data());
+    tester.test("Scalar pointer",smem.block(0)==&sA);
 
     //Set Memory
     mem.block(0)[0]=999.0;
@@ -58,7 +58,7 @@ int main()
     tester.test("Vector Set Memory",vA(0,0)==999.0);
     smem.block(0)[0]=999.0;
     simpl.set_memory(sA,smem);
-    tester.test("Scalar Set Memory",sA(0,0)==999.0);
+    tester.test("Scalar Set Memory",sA==999.0);
 
     //Slice
     eigen_matrix slice=impl.slice(A,{2,1},{3,3});

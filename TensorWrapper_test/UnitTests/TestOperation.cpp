@@ -131,7 +131,7 @@ int main()
     Trace<Tr_t> tr(value3);
     std::array<size_t,0> corr_trdims{};
     tester.test("Trace dims",corr_trdims==tr.dimensions());
-    double result7=tr.eval<type>();
+    auto result7=tr.eval<type>();
     tester.test("Trace",result7==value2.trace());
 
     return tester.results();
