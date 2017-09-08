@@ -1,8 +1,8 @@
 //This file meant from inclusion only from TensorImpls.hpp
 #define EIGEN_USE_THREADS //Enables threading for eigen::tensor
-#include <eigen3/Eigen/Dense>
-#include <eigen3/unsupported/Eigen/CXX11/ThreadPool>
-#include <eigen3/unsupported/Eigen/CXX11/Tensor>
+#include <Eigen/Dense>
+#include <unsupported/Eigen/CXX11/ThreadPool>
+#include <unsupported/Eigen/CXX11/Tensor>
 #include "TensorWrapper/Indices.hpp"
 #include "TensorWrapper/TMUtils/TypeComparisons.hpp"
 namespace TWrapper {

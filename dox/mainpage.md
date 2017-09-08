@@ -1,10 +1,28 @@
 TensorWrapper {#mainpage}
 =============
 
-[Configuring and Compiling](@ref md_Building)
+Set-Up Documentation
+--------------------
 
-[Supported Backends](@ref md_SupportedBackends)
+These are topic focused on documenting how to configure/build TensorWrapper as
+well as clarifications and notes about the supported backends.
 
-[QuickStart](@ref md_QuickStart)
+- [Configuring and Compiling](@ref Building.md)
+- [Supported Backends](@ref SupportedBackends.md)
 
-[Adding a Backend](@ref md_NewBackend)
+User Documentation
+------------------
+
+These are topics focused on how to use the TensorWrapper library in more
+detail.
+
+- [QuickStart](@ref QuickStart.md)
+- [Linear Algebra API](@ref LinAlg.md)
+
+Developer Documentation
+-----------------------
+
+These are topics targeting people who want to contribute to the TensorWrapper
+project.
+
+- [Adding a Backend](@ref NewBackend.md)

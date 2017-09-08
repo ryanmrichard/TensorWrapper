@@ -1,6 +1,6 @@
 //This file meant from inclusion only from TensorImpls.hpp
-#include <eigen3/Eigen/Dense>
-#include <eigen3/unsupported/Eigen/CXX11/Tensor>
+#include <Eigen/Dense>
+#include <unsupported/Eigen/CXX11/Tensor>
 #include <map>
 #include "TensorWrapper/TensorImpl/ContractionHelper.hpp"
 namespace TWrapper {
