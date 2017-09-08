@@ -1,6 +1,6 @@
 foreach(name TestTensorPtr TestOperation TestShape TestMemory TestTensorWrapper
              TestTraits TestEigen TestEigenTensor TestIndices TestGAWrapper
-             TestTiledArray
+             TestTiledArray TestTypeComparisons
 )
     NEW_TEST(${name} UnitTests)
 endforeach()

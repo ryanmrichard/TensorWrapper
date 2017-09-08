@@ -4,6 +4,7 @@
 #include <eigen3/unsupported/Eigen/CXX11/ThreadPool>
 #include <eigen3/unsupported/Eigen/CXX11/Tensor>
 #include "TensorWrapper/Indices.hpp"
+#include "TensorWrapper/TMUtils/TypeComparisons.hpp"
 namespace TWrapper {
 namespace detail_ {
 template<size_t rank,typename T,TensorTypes LHS_t,TensorTypes RHS_t>
@@ -23,6 +24,15 @@ auto allocater(const std::array<size_t,rank>& idx)
      return allocate_guts<Tensor_t>(idx, std::make_index_sequence<rank>{});
 }
 
+template<typename T>
+struct TraceHelper;
+
+template<typename...Idxs>
+struct TraceHelper<Indices<Idxs...>>{
+    static constexpr size_t full_size=sizeof...(Idxs);
+    static constexpr size_t done_size=
+            std::tuple_size<typename GetUnique<Idxs...>::type>::value;
+};
 
 
 template<size_t rank, typename T>
@@ -59,6 +69,19 @@ struct TensorWrapperImpl<rank,T,TensorTypes::EigenTensor> {
     auto permute(const Tensor_t& t, const array_t& permutation)const
     {
         return t.shuffle(permutation);
+    }
+
+    template<typename LHS_Idx,typename LHS_t>
+    auto trace(const LHS_t& lhs)const
+    {
+        constexpr auto counts=LHS_Idx().get_counts();
+        constexpr size_t final_size=TraceHelper<LHS_Idx>::done_size;
+        constexpr size_t size=counts.size()-final_size;
+        std::array<size_t,size> dims{};
+        for(size_t i=0,counter=0; i<counts.size();++i)
+            if(counts[i]!=1)
+                dims[counter++]=i;
+        return lhs.trace(dims);
     }
 
     template<typename Tensor_t>

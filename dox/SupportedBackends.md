@@ -1,4 +1,4 @@
-Supported Backends {#backends}
+Supported Backends
 ==================
 
 At the moment TensorWrapper supports the following backends subject to the

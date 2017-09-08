@@ -57,6 +57,7 @@ int main()
     auto j=make_index("j");
     auto k=make_index("k");
     auto l=make_index("l");
+    using idx_ii=detail_::make_indices<decltype(i),decltype(i)>;
     using idx_ij=detail_::make_indices<decltype(i),decltype(j)>;
     using idx_ik=detail_::make_indices<decltype(i),decltype(k)>;
     using idx_ji=detail_::make_indices<decltype(j),decltype(i)>;
@@ -94,6 +95,11 @@ int main()
     C=B.shuffle(std::array<int,2>{1,0});
     D=impl.permute(B,{1,0});
     tester.test("Permutation",impl.are_equal(C,D));
+
+    //Trace
+    Eigen::Tensor<double,0> x=A.trace(std::array<int,2>{0,1});
+    Eigen::Tensor<double,0> y=impl.trace<idx_ii>(A);
+    tester.test("Trace of A",impl.are_equal(x,y));
 
     //Contraction
     D=A.contract(B,idx_array<1>{idx_t{1,0}});

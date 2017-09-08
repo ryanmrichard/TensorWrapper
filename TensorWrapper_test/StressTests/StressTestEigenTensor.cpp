@@ -32,9 +32,9 @@ int main(int argc, char** argv)
 
     const std::array<size_t,2> dims({dim,dim});
     tensor_type _A(dims),_B(dims),_C(dims);
-    FillRandom(_A);
-    FillRandom(_B);
-    FillRandom(_C);
+    fill_random(_A);
+    fill_random(_B);
+    fill_random(_C);
 
     Tensor<double,2> A=_A.data(),B=_B.data(),C=_C.data();
 
@@ -83,9 +83,9 @@ int main(int argc, char** argv)
 
     std::array<size_t,3> dims({dim,dim,dim});
     EigenTensor<3,double> _A(dims),_B(dims),_C(dims);
-    FillRandom(_A);
-    FillRandom(_B);
-    FillRandom(_C);
+    fill_random(_A);
+    fill_random(_B);
+    fill_random(_C);
     Tensor<double,3> A=_A.data(),B=_B.data(),C=_C.data(),D(dim,dim,dim);
 
     Timer timer;

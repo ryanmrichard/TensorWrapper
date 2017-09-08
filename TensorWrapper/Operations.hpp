@@ -19,6 +19,7 @@
 #include "TensorWrapper/Operations/Subtraction.hpp"
 #include "TensorWrapper/Operations/IndexedTensor.hpp"
 #include "TensorWrapper/Operations/Contraction.hpp"
+#include "TensorWrapper/Operations/Trace.hpp"
 
 /** \brief \relates AddOp
  *

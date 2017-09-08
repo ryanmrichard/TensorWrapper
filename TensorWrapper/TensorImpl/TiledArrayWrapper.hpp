@@ -123,6 +123,12 @@ struct TensorWrapperImpl<R,T,TensorTypes::TiledArray> {
         return _l*_r;
     }
 
+    template<typename LHS_Idx,typename Tensor_t>
+    auto trace(const Tensor_t& lhs)const
+    {
+        return TADerefer<R,LHS_Idx,Tensor_t>::eval(lhs);
+    }
+
     template<typename LHS_t, typename RHS_t>
     bool are_equal(const LHS_t& lhs,const RHS_t&rhs)const
     {

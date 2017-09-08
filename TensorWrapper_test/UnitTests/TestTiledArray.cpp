@@ -69,6 +69,7 @@ int main(int argc, char** argv)
     auto j=make_index("j");
     auto k=make_index("k");
     auto l=make_index("l");
+    //using idx_ii=detail_::make_indices<decltype(i),decltype(i)>;
     using idx_ij=detail_::make_indices<decltype(i),decltype(j)>;
     using idx_ik=detail_::make_indices<decltype(i),decltype(k)>;
     using idx_ji=detail_::make_indices<decltype(j),decltype(i)>;
@@ -103,6 +104,12 @@ int main(int argc, char** argv)
     C("j,i")=B("i,j");
     D=impl.permute(B,{1,0});
     tester.test("Permutation",impl.are_equal(C,D));
+
+    //Trace
+    //C()=A("i,i");
+    //D()=impl.trace<idx_ii>(A);
+    //tester.test("Trace of A",impl.are_equal(C,D));
+
 
     //Contraction
     D("i,k")=A("i,j")*B("j,k");

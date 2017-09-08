@@ -70,6 +70,7 @@ int main()
     using Index_t=Indices<decltype(i),decltype(j)>;
     using Index_t2=Indices<decltype(j),decltype(k)>;
     using Index_t3=Indices<decltype(k),decltype(l)>;
+    using Index_t4=Indices<decltype(i),decltype(i)>;
 
     //AddOp
     Convert<Eigen::MatrixXd> mat(value);
@@ -123,6 +124,15 @@ int main()
     tester.test("Permute dims",corr_idx2==perm.dimensions());
     Eigen::MatrixXd result6=perm.eval<type>();
     tester.test("Transpose",result6==value2.transpose());
+
+    //Trace
+    using Tr_t=IndexedTensor<double, Convert<Eigen::MatrixXd>,Index_t4>;
+    Tr_t value3(mat2);
+    Trace<Tr_t> tr(value3);
+    std::array<size_t,0> corr_trdims{};
+    tester.test("Trace dims",corr_trdims==tr.dimensions());
+    auto result7=tr.eval<type>();
+    tester.test("Trace",result7==value2.trace());
 
     return tester.results();
 }

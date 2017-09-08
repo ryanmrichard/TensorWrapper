@@ -48,9 +48,7 @@ int main()
             X(mu,p)*Y(nu,q)*X(rho,r)*Y(sigma,s)*G(mu,nu,rho,sigma);
     EigenTensor<4,double> Ltilde=
             Gtilde(p,q,r,s)*2.0-Gtilde(p,s,r,q);
-    //Err I don't have trace
-    EigenTensor<2,double> Ftilde=Htilde(p,q);//+
-    //       Gtilde(p,q,i,i)*2.0-Gtilde(p,i,i,q);
+    EigenTensor<2,double> Ftilde=Htilde(p,q)+Gtilde(p,q,i,i)*2.0-Gtilde(p,i,i,q);
 
     //Singles residuals
     EigenTensor<4,double> u=T2(i,a,j,b)*2.0-T2(j,a,i,b);

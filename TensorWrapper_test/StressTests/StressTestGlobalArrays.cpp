@@ -20,9 +20,9 @@ int main(int argc, char** argv)
     const size_t dim=argc>1?atoi(argv[1]):10;
     const std::array<size_t,2> dims({dim,dim});
     tensor_type _A(dims),_B(dims),_C(dims);
-    FillRandom(_A);
-    FillRandom(_B);
-    FillRandom(_C);
+    fill_random(_A);
+    fill_random(_B);
+    fill_random(_C);
 
     wrapped_type A(_A.data()),B(_B.data()),C(_C.data());
 

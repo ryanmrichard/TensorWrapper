@@ -15,9 +15,9 @@ int main()
     using index_t=std::array<size_t,2>;
     const index_t dims({dim,dim}), zeros({0,0});
     tensor_type _A(dims),_B(dims),_C(dims);
-    FillRandom(_A);
-    FillRandom(_B);
-    FillRandom(_C);
+    fill_random(_A);
+    fill_random(_B);
+    fill_random(_C);
 
     wrapped_type A(_A.data()),B(_B.data()),C(_C.data());
     tensor_type __A(A);

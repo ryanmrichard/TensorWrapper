@@ -31,7 +31,7 @@ struct ToEigenType<1,T>
 template<typename T>
 struct ToEigenType<0,T>
 {
-    using type=Eigen::Matrix<T,1,1>;
+    using type=T;
 };
 
 ///Primary template for making the correct shape instance.
@@ -68,9 +68,9 @@ template<>
 struct DimMaker<0>
 {
     template<typename Tensor_t>
-    static Shape<0> eval(const Tensor_t& impl)
+    static Shape<0> eval(const Tensor_t&)
     {
-        return Shape<0>(std::array<size_t,0>{},impl.IsRowMajor);
+        return Shape<0>(std::array<size_t,0>{},false);
     }
 };
 
@@ -159,10 +159,28 @@ struct SlicingImpl<0,T> {
                    const std::array<size_t,0>&,
                    const std::array<size_t,0>&)
   {
-    return typename ToEigenType<0,T>::type(impl.segment(0,1));
+    return typename ToEigenType<0,T>::type(impl);
   }
 };
 
+template<size_t R, typename T>
+struct GetMemoryImpl{
+    template<typename Tensor_t>
+    static auto eval(Tensor_t& impl)
+    {
+
+        return impl.data();
+    }
+};
+
+template<typename T>
+struct GetMemoryImpl<0,T>{
+    template<typename Tensor_t>
+    static auto eval(Tensor_t& impl)
+    {
+        return &impl;
+    }
+};
 
 template<size_t R, typename T>
 struct SetMemoryImpl{
@@ -194,7 +212,7 @@ struct SetMemoryImpl<0,T>{
     static void eval(Tensor_t& impl,const MemoryBlock<0,T>& block,
                      std::index_sequence<Is...>)
     {
-        impl(0,0)=block.block(0)[0];
+        impl=block.block(0)[0];
     }
 };
 
@@ -228,9 +246,11 @@ struct TensorWrapperImpl<R,T,TensorTypes::EigenMatrix> {
     template<typename Tensor_t>
     auto get_memory(Tensor_t& impl)const{
         MemoryBlock<R,T> rv;
-        rv.add_block(impl.data(),dims(impl),array_t{},dims(impl).dims());
+        auto x=GetMemoryImpl<R,T>::eval(impl);
+        rv.add_block(x,dims(impl),std::array<size_t,R>{},dims(impl).dims());
         return rv;
     }
+
 
     template<typename Tensor_t>
     void set_memory(Tensor_t& impl,const MemoryBlock<R,T>& block)const
@@ -315,6 +335,13 @@ struct TensorWrapperImpl<R,T,TensorTypes::EigenMatrix> {
     auto contraction(const LHS_t& lhs, const RHS_t& rhs)const
     {
         return ContractionImpl<R>::template eval<LHS_Idx,RHS_Idx>(lhs,rhs);
+    }
+
+    template<typename LHS_Idx,typename LHS_t>
+    auto trace(const LHS_t& lhs)const
+    {
+        static_assert(LHS_Idx().size()==2,"Trace only available for matrix");
+        return lhs.trace();
     }
 
     template<typename My_t>
