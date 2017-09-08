@@ -14,7 +14,7 @@ matrix:
         - cmake-data
         - g++-5
         - libblas-dev
-        - liblapack-dev
+        - liblapacke-dev
     env: CXX_COMPILER='g++-5'
 script:
 - cmake
@@ -22,6 +22,10 @@ script:
   -Bbuild
   -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
   -DCMAKE_BUILD_TYPE=Release
+  -DCBLAS_INCLUDE_DIR=/usr/include
+  -DCBLAS_LIBRARIES=/usr/lib/libblas
+  -DLAPACKE_INCLUDE_DIR=/usr/include
+  -DLAPACKE_LIBRARIES=/usr/lib/
 - cd build && make
 - ctest
 - cd -
