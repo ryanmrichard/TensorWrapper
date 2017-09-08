@@ -159,7 +159,20 @@ public:
      */
     my_type& operator=(const my_type& /*other*/)=default;
 
+    /** \brief The move constructor for TensorWrapper instances that
+     *  share the same backend.
+     *
+     *   \param[in] other The TensorWrapper instance to take ownership of
+     */
     TensorWrapper(my_type&&)=default;
+
+    /** \brief The move assignment for TensorWrapper instances that
+     *  share the same backend.
+     *
+     *   \param[in] other The TensorWrapper instance to take ownership of
+     *   \returns The current instance containing \p other
+     *
+     */
     my_type& operator=(my_type&&)=default;
 
     /** \brief The constructor used for wrapping the native classes of a tensor
@@ -265,6 +278,19 @@ public:
         impl_.set_memory(data(),other);
     }
 
+    /** \brief Allows us to compare for equality against a lazy evaluation
+     *  expression.
+     *
+     *  Although this may at first not seem useful, realize that in order to
+     *  invoke the equal implementation of the backend the input needs to be in
+     *  that backend's native format.  The easiest way to do this is with the
+     *  Convert function, which is how this overload is usually invoked.
+     *
+     *  \param[in] rhs The operation to evaluate.
+     *
+     *  \tparam RHS_t The type of the operation to evaluate.
+     *
+     */
     template<typename RHS_t>
     bool operator==(detail_::OperationBase<RHS_t>& rhs)const
     {
@@ -341,6 +367,8 @@ template<size_t rank,typename T>
 using EigenTensor=TensorWrapper<rank,T,detail_::TensorTypes::EigenTensor>;
 template<size_t rank,typename T>
 using GlobalArray=TensorWrapper<rank,T,detail_::TensorTypes::GlobalArrays>;
+template<size_t rank,typename T>
+using TATensor=TensorWrapper<rank,T,detail_::TensorTypes::TiledArray>;
 
 template class TensorWrapper<1,double,detail_::TensorTypes::EigenMatrix>;
 template class TensorWrapper<2,double,detail_::TensorTypes::EigenMatrix>;
@@ -349,10 +377,6 @@ template class TensorWrapper<1,double,detail_::TensorTypes::EigenTensor>;
 template class TensorWrapper<2,double,detail_::TensorTypes::EigenTensor>;
 template class TensorWrapper<3,double,detail_::TensorTypes::EigenTensor>;
 template class TensorWrapper<4,double,detail_::TensorTypes::EigenTensor>;
-
-//template class TensorWrapper<1,double,detail_::TensorTypes::GlobalArrays>;
-//template class TensorWrapper<2,double,detail_::TensorTypes::GlobalArrays>;
-
 
 }//End namespace TWrapper
 

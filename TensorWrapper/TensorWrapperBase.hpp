@@ -246,7 +246,7 @@ public:
  *  \returns The tensor now with random numbers.
  */
 template<size_t R, typename T>
-TensorWrapperBase<R,T>& FillRandom(TensorWrapperBase<R,T>& tensor)
+TensorWrapperBase<R,T>& fill_random(TensorWrapperBase<R,T>& tensor)
 {
          auto mem=tensor.get_memory();
          std::random_device rd;
