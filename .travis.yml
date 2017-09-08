@@ -15,6 +15,7 @@ matrix:
         - g++-5
         - libblas-dev
         - liblapacke-dev
+        - libmpich2-dev
     env: CXX_COMPILER='g++-5'
 install:
 - wget http://bitbucket.org/eigen/eigen/get/3.3.2.tar.bz2
