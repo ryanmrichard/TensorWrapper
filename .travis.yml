@@ -22,7 +22,7 @@ install:
 - cd eigen-eigen-da9b4e14c255
 - cmake -H. -Bbuild -DCMAKE_CXX_COMPILER=${CXX_COMPILER} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${HOME}
 - cd build && make install
-- cd ${HOME}
+- cd ${TRAVIS_BUILD_DIR}
 script:
 - cmake
   -H.
