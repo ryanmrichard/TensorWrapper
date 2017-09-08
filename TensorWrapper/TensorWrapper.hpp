@@ -388,8 +388,9 @@ bool operator==(LHS&& lhs,const TWrapper::TensorWrapper<R,T,TT>& rhs)
     return rhs==std::forward<LHS>(lhs);
 }
 
-///Overload not equal operator for our types on rigth
-template<size_t R, typename T, TWrapper::detail_::TensorTypes TT, typename LHS>
+///Overload not equal operator for our types on right
+template<size_t R, typename T, TWrapper::detail_::TensorTypes TT, typename LHS,
+                  typename TWrapper::detail_::EnableIfNotATWrapper<LHS>::type=0>
 bool operator!=(LHS&& lhs,const TWrapper::TensorWrapper<R,T,TT>& rhs)
 {
     return rhs!=std::forward<LHS>(lhs);

@@ -1,4 +1,4 @@
-Quick Start   {#QuickStart}
+Quick Start
 ===========
 
 The point of this page is to get you quickly up and running with the
@@ -35,7 +35,7 @@ int main()
     vector2<<1.1, 2.2, 3.3, 4.4, 5.5;
 
     //Wraps an already existing native instance
-    TWrapper::EigenMatrix<1,std::complex<double>> vector3(vector2);
+    TWrapper::EigenMatrix<1,double> vector3(vector2);
 
     return 0;
 }//End main function

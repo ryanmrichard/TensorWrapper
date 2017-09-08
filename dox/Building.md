@@ -1,4 +1,4 @@
-Configuring and Compiling {#Building}
+Configuring and Compiling
 =========================
 
 We have done our best to make the configuration and compilation of TensorWrapper
@@ -53,12 +53,16 @@ This table lists options that are passed to CMake in the same manner as other
 CMake variables, but are specific to TensorWrapper.
 
 --------------------------------------------------------------------------------
-| Option Name     |  Description                                               |
-| :-------------: | :----------------------------------------------------------|
-| ENABLE_STRESS_TESTS | Build test cases that may use significant amounts of memory? |
-| ENABLE_Eigen3   | Placeholder option for the moment as Eigen can't be disabled |
-| ENABLE_GAXX     | Builds TensorWrapper bindings to my GlobalArrays C++ API. |
--------------------------------------------------------------------------------
+| Option Name       |  Description                                             |
+| :---------------: | :--------------------------------------------------------|
+| BUILD_TESTS       | Build test cases? Increases build time                   |
+| ENABLE_Eigen3     | Build Eigen bindings? Must be enabled at this time       |
+| ENABLE_GAXX       | Build TensorWrapper bindings to my GlobalArrays C++ API? |
+| ENABLE_tiledarray | Build the TensorWrapper TiledArray bindings?             |
+--------------------------------------------------------------------------------
+
+Note:  I realize the inconsistent case of the various backends is annoying;
+however, the case is determined by the backend's CMake infrastructure.
 
 
 Math Libraries

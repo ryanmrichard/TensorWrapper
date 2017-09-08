@@ -267,8 +267,9 @@ public:
     constexpr auto operator()(const detail_::C_String<Chars...>&,Args...)const
     {
         static_assert(sizeof...(Args)+1==R,"#indices != rank");
-        using Index_t=detail_::make_indices<detail_::C_String<Chars...>,Args...>;
-        return DeRefHelper<IndexHelper<Index_t>::value,Index_t>::eval(this);
+        using Idx1=detail_::C_String<Chars...>;
+        using Index_t=detail_::make_indices<Idx1,Args...>;
+        return DeRefHelper<IndexHelper<Idx1,Args...>::value,Index_t>::eval(this);
     }
 };
 

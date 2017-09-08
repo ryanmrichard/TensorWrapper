@@ -1,0 +1,29 @@
+language: cpp
+sudo: required
+matrix:
+  include:
+  - os: linux
+    compiler: gcc
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        - george-edison55-precise-backports
+        packages:
+        - cmake
+        - cmake-data
+        - g++-5
+    env: CXX_COMPILER='g++-5'
+install:
+- cmake -version
+script:
+- cmake
+  -H.
+  -Bbuild
+  -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
+  -DCMAKE_BUILD_TYPE=Release
+- cd build && make
+- ctest
+- cd -
+after_failure:
+- cat Testing/Temporary/LastTest.log

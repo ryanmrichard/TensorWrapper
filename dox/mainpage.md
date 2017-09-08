@@ -1,6 +1,10 @@
 TensorWrapper {#mainpage}
 =============
 
-[Configuring and Compiling](@ref Building)
+[Configuring and Compiling](@ref md_Building)
 
-[QuickStart](@ref QuickStart)
+[Supported Backends](@ref md_SupportedBackends)
+
+[QuickStart](@ref md_QuickStart)
+
+[Adding a Backend](@ref md_NewBackend)
