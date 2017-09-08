@@ -2,6 +2,7 @@ TensorWrapper
 =============
 
 [![Documentation](https://codedocs.xyz/ryanmrichard/TensorWrapper.svg)](https://codedocs.xyz/ryanmrichard/TensorWrapper/)
+[![Build Status](https://travis-ci.org/ryanmrichard/TensorWrapper.svg?branch=master)](https://travis-ci.org/ryanmrichard/TensorWrapper)
 
 Brief Description
 -----------------

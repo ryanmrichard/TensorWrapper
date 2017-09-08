@@ -13,15 +13,28 @@ matrix:
         - cmake
         - cmake-data
         - g++-5
+        - libblas-dev
+        - liblapacke-dev
     env: CXX_COMPILER='g++-5'
 install:
-- cmake -version
+- wget http://bitbucket.org/eigen/eigen/get/3.3.2.tar.bz2
+- tar -xf 3.3.2.tar.bz2
+- cd eigen-eigen-da9b4e14c255
+- cmake -H. -Bbuild -DCMAKE_CXX_COMPILER=${CXX_COMPILER} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${HOME}
+- cd build && make install
+- cd ${TRAVIS_BUILD_DIR}
 script:
+- ls ${HOME}/include/eigen3
 - cmake
   -H.
   -Bbuild
   -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
   -DCMAKE_BUILD_TYPE=Release
+  -DCMAKE_PREFIX_PATH=${HOME}
+  -DCBLAS_INCLUDE_DIR=/usr/include
+  -DCBLAS_LIBRARIES=/usr/lib/libblas/libblas.a
+  -DLAPACKE_INCLUDE_DIR=/usr/include
+  -DLAPACKE_LIBRARIES=/usr/lib/liblapacke.a
 - cd build && make
 - ctest
 - cd -

@@ -47,12 +47,14 @@ rank 2 tensors whose elements are either floats or doubles and whose dimensions
 are compatible (*i.e.* the following operations are defined).  These tensors are
 assumed to be assigned to the variables `A`, `B`, and `C`.
 
+
 ## Addition
 
 As you likely expect, addition is invoked via the `+` sign:
 ```.cpp
 //C_ij = A_ij + B_ij
 C=A(i,j)+B(i,j);
+
 
 //C_ij = A_ij + B_ij
 C=A+B;
@@ -63,7 +65,6 @@ C=A+B;
 //C_ij = A_ij + B_ji
 C=A(i,j)+B(j,i);
 ```
-
 ## Subtraction
 
 Subtraction support is the same as addition except it is invoked via the `-`

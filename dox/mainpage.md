@@ -1,6 +1,7 @@
 TensorWrapper {#mainpage}
 =============
 
+<<<<<<< HEAD
 Set-Up Documentation
 --------------------
 
