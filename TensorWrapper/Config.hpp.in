@@ -6,9 +6,9 @@
 
 #if @HAVE_MKL@
    #define EIGEN_USE_MKL_ALL
-#else
-   #define EIGEN_USE_BLAS
-   #define EIGEN_USE_LAPACKE
+//#else
+//   #define EIGEN_USE_BLAS
+//   #define EIGEN_USE_LAPACKE
 #endif
 
 #if @MPI_FOUND@
