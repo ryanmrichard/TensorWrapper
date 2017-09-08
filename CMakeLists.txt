@@ -95,7 +95,7 @@ ExternalProject_Add(TensorWrapper
                      -DBACKENDS_OFF:LIST=${BACKENDS_OFF}
 )
 
-foreach(x ${BACKENDS})
+foreach(x ${BACKENDS_ON})
     add_dependencies(TensorWrapper ${x}_external)
 endforeach()
 

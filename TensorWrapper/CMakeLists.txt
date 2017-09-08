@@ -3,6 +3,8 @@ project(TensorWrapper-Core CXX)
 include(${TWRAPPER_ROOT}/cmake/cmake_macros.cmake)
 
 find_package(MPI)
+
+#C-ify some variables
 foreach(pkg ${BACKENDS_ON})
     set(ENABLE_${pkg} 1)
 endforeach()
@@ -14,6 +16,12 @@ if(${HAVE_MKL})
     set(HAVE_MKL 1)
 else()
     set(HAVE_MKL 0)
+endif()
+
+if(${FOUND_MPI})
+    set(HAVE_MPI 1)
+else()
+    set(HAVE_MPI 0)
 endif()
 
 #Header-only so nothing to do besides...

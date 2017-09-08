@@ -11,7 +11,7 @@
 //   #define EIGEN_USE_LAPACKE
 #endif
 
-#if @MPI_FOUND@
+#if @HAVE_MPI@
    #include<mpi.h>
 #else
    using MPI_Comm=int;
