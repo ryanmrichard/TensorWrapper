@@ -5,23 +5,33 @@
 namespace TWrapper {
 namespace detail_ {
 
-template<size_t rank, typename T>
-struct MemoryFunctor{
-    std::vector<T> buffer_;
-    GATensor<rank,T>& parent_;
-    Shape<rank> shape_;
-    MemoryFunctor(std::vector<T>&& buffer,
-                  GATensor<rank,T>& parent,
-                  Shape<rank> shape):
-        buffer_(std::move(buffer)),
-        parent_(parent),
-        shape_(shape)
-    {}
-
-
-    T& operator()(const std::array<size_t,rank>& idx)
+template<bool lt, bool rt,size_t nfree>
+struct GAContract{
+    template<typename lhs_t, typename rhs_t>
+    static auto eval(const lhs_t& lhs, const rhs_t& rhs)
     {
-        return buffer_[shape_.flat_index(idx)];
+        if(lt && rt)
+            return lhs.transpose()*rhs.transpose();
+        if(lt && !rt)
+            return lhs.transpose()*rhs;
+        if(!lt && rt)
+            return lhs*rhs.transpose();
+        return lhs *rhs;
+    }
+};
+
+template<bool lt, bool rt>
+struct GAContract<lt,rt,0>{
+    template<typename lhs_t, typename rhs_t>
+    static auto eval(const lhs_t& lhs, const rhs_t& rhs)
+    {
+        if(lt && rt)
+            return lhs.transpose().dot(rhs.transpose());
+        if(lt && !rt)
+            return lhs.transpose().dot(rhs);
+        if(!lt && rt)
+            return lhs.dot(rhs.transpose());
+        return lhs.dot(rhs);
     }
 };
 
@@ -38,13 +48,15 @@ struct TensorWrapperImpl<rank,T,TensorTypes::GlobalArrays> {
     auto get_memory(Tensor_t& impl)const{
         array_t start,end;
         std::tie(start,end)=impl.my_slice();
-        array_t dims;
+        auto mem=impl.get_values(start,end);
+        array_t block_dims;
         std::transform(end.begin(),end.end(),
-                       start.begin(),dims.begin(),std::minus<size_t>());
-        Shape<rank> my_shape(dims,true);
+                       start.begin(),block_dims.begin(),std::minus<size_t>());
+        Shape<rank> my_shape(block_dims,true);
         MemoryBlock<rank,T> rv;
         std::unique_ptr<T[]> ptr(new T[my_shape.size()]);
-        rv.add_block(std::move(ptr),dims(impl),start,end);
+        std::copy(mem.begin(),mem.end(),ptr.get());
+        rv.add_block(std::move(ptr),my_shape,start,end);
         return rv;
     }
 
@@ -59,6 +71,14 @@ struct TensorWrapperImpl<rank,T,TensorTypes::GlobalArrays> {
 
     type allocate(const array_t& dims)const{
         return type(dims);
+    }
+
+
+    template<typename LHS_Idx,typename LHS_t>
+    auto trace(const LHS_t& lhs)const
+    {
+        static_assert(LHS_Idx().size()==2,"Trace only available for matrix");
+        return lhs.trace();
     }
 
     template<typename Tensor_t>
@@ -86,8 +106,8 @@ struct TensorWrapperImpl<rank,T,TensorTypes::GlobalArrays> {
         return lhs==other;
     }
 
-    template<typename LHS_t>
-    auto scale(const LHS_t& lhs,double val)const->decltype(lhs*val)
+    template<typename Index_t, typename LHS_t>
+    auto scale(const LHS_t& lhs,double val)const
     {
         return lhs*val;
     }
@@ -119,20 +139,23 @@ struct TensorWrapperImpl<rank,T,TensorTypes::GlobalArrays> {
         return lhs-rhs.transpose();
     }
 
+    template<typename,typename Op_t>
+    auto eval(const Op_t& op,const array_t&)const
+    {
+        type c=op;
+        return c;
+    }
+
     ///Contraction
-    template<typename LHS_t, typename RHS_t, typename LHS_Idx, typename RHS_Idx>
-    auto contraction(const LHS_t& lhs, const RHS_t& rhs,
-                     const LHS_Idx,const RHS_Idx)const
+    template<typename LHS_Idx, typename RHS_Idx,typename LHS_t, typename RHS_t>
+    auto contraction(const LHS_t& lhs, const RHS_t& rhs)const
     {
         static_assert(LHS_Idx::size()<3&&RHS_Idx::size()<3,
                       "GA does not support real contraction");
-        using contract=ContractionTraits<LHS_Idx,RHS_Idx,LHS_Idx::size(),
-                                                         RHS_Idx::size()>;
-        return ContractionHelper<contract::nfree,
-                                 contract::ndummy,
-                                 contract::ltranspose,
-                                 contract::rtranspose>().
-                contract(lhs,rhs);
+        using traits=
+            ContractionTraits<LHS_Idx,RHS_Idx,LHS_Idx::size(),RHS_Idx::size()>;
+        return GAContract<traits::ltranspose,traits::rtranspose,traits::nfree>::
+                eval(lhs,rhs);
     }
 
 

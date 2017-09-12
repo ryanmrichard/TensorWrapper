@@ -84,14 +84,12 @@ struct AddOp: public OperationBase<AddOp<LHS_t,RHS_t>>{
     {
         using lidx=typename LHS_t::indices;
         using ridx=typename RHS_t::indices;
-        //static_assert(lidx::size()==ridx::size(),
-        //              "Can not add tensors of different rank");
-
-
+        static_assert(lidx::size()==ridx::size(),
+                      "Can not add tensors of different rank");
 
         return TensorWrapperImpl<rank,scalar_type,TT>().
-                template add<typename LHS_t::indices,typename RHS_t::indices>(
-                        lhs_.template eval<TT>(),rhs_.template eval<TT>());
+                template add<lidx,ridx>(lhs_.template eval<TT>(),
+                                        rhs_.template eval<TT>());
     }
 
 };

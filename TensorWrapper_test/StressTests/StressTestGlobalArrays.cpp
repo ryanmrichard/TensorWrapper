@@ -16,6 +16,7 @@ int main(int argc, char** argv)
 {
     Tester tester("Stress Testing Global Arrays Wrapping");
  #ifdef ENABLE_GAXX
+    RunTime rt(argc,argv);
     using wrapped_type=GATensor<2,double>;
     const size_t dim=argc>1?atoi(argv[1]):10;
     const std::array<size_t,2> dims({dim,dim});
