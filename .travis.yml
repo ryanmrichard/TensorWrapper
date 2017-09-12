@@ -21,7 +21,12 @@ matrix:
 install:
 - hg clone https://bitbucket.org/eigen/eigen/
 - cd eigen
-- cmake -H. -Bbuild -DCMAKE_CXX_COMPILER=${CXX_COMPILER} -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${HOME}
+- cmake
+  -H.
+  -Bbuild
+  -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
+  -DCMAKE_BUILD_TYPE=Release
+  -DCMAKE_INSTALL_PREFIX=${HOME}
 - cd build && make install
 - cd ${TRAVIS_BUILD_DIR}
 script:

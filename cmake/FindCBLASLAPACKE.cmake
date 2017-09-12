@@ -2,13 +2,13 @@
 #variables are set.
 
 include(FindPackageHandleStandardArgs)
-set(IS_MKL FALSE)
+set(HAVE_MKL FALSE)
 find_path(MKL_HEADER_PATH mkl.h
           PATHS ${LAPACKE_INCLUDE_DIR}
           NO_DEFAULT_PATH
 )
 if(MKL_HEADER_PATH)
-    set(IS_MKL TRUE)
+    set(HAVE_MKL TRUE)
     set(LAPACKE_INCLUDE_FILE "mkl.h")
     set(CBLAS_FOUND TRUE)
 else()

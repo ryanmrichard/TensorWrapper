@@ -82,7 +82,7 @@ requires "modern" BLAS/LAPACK so-called CBLAS/LAPACKE respectively.
 | LAPACKE_INCLUDE_DIR | The path to the include directory for the LAPACKE header|
 -------------------------------------------------------------------------------
 
-:note: If you are using MKL it is sufficient to simply set the LAPACKE versions of the
+**N.B.** If using MKL it is sufficient to simply set the LAPACKE versions of the
 variables.  Whether you are using MKL or not will be detected based on whether
 or not `mkl.h` is found in the path that `LAPACKE_INCLUDE_DIR` is set to. The
 remaining variable, `LAPACKE_LIBRARIES`, should be set to whatever the [Intel

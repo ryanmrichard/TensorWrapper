@@ -6,6 +6,45 @@
 namespace TWrapper {
 namespace detail_ {
 
+///This struct basically maps matrix and vector multiplications for us
+template<size_t NFree, size_t NDummy, bool rows_same, bool cols_same>
+struct ContractionHelper{};
+
+#define CHelperSpecial(NFree,NDummy,ltranspose,rtranspose,guts)\
+template<>\
+struct ContractionHelper<NFree,NDummy,ltranspose,rtranspose>{\
+template<typename LHS_t,typename RHS_t>\
+auto contract(const LHS_t& lhs, const RHS_t& rhs){\
+   return guts;\
+}}
+
+//i,j * i,j or j,i * j,i
+CHelperSpecial(0,4,false,false,lhs.cwiseProduct(rhs).sum());
+//i,j * j,i or j,i * i,j
+CHelperSpecial(0,4,false,true,lhs.cwiseProduct(rhs.transpose()).sum());
+//i,j * k,j
+CHelperSpecial(2,2,false,true,lhs*rhs.transpose());
+//j,i * j,k
+CHelperSpecial(2,2,true,false,lhs.transpose()*rhs);
+//i,j * j,k
+CHelperSpecial(2,2,false,false,lhs*rhs);
+//j,i * k,j
+CHelperSpecial(2,2,true,true,lhs.transpose()*rhs.transpose());
+//i*i,j or i,j*i
+CHelperSpecial(1,2,true,false,lhs.transpose()*rhs);
+CHelperSpecial(1,2,false,true,lhs*rhs.transpose());
+//j,i* i
+CHelperSpecial(1,2,false,false,lhs*rhs);
+//i*j,i
+CHelperSpecial(1,2,true,true,lhs.transpose()*rhs.transpose());
+//i * i
+CHelperSpecial(0,1,true,false,lhs.transpose()*rhs);
+//i * j or j*i
+CHelperSpecial(2,0,false,true,lhs*rhs.transpose());
+
+
+#undef CHelperSpecial
+
 //Unfortunately the Eigen API depends on the rank these first few structs are
 //specialized on the rank to ensure the correct Eigen API is called.
 
@@ -87,8 +126,8 @@ struct ContractionImpl<2>
         constexpr bool isvec=RHS_Idx::size()==1;
         constexpr bool rrow=RHS_t::RowsAtCompileTime==1;
         using contract=ContractionTraits<LHS_Idx,RHS_Idx,2,RHS_Idx::size()>;
-        constexpr bool rtranspose=(!isvec?contract::rtranspose:
-                                          contract::rtranspose!=rrow);
+        constexpr bool rt_=contract::rtranspose;
+        constexpr bool rtranspose=(isvec && rrow ? !rt_ : rt_ );
         return ContractionHelper<contract::nfree,
                                  contract::ndummy,
                                  contract::ltranspose,

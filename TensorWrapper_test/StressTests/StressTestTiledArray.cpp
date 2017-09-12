@@ -18,6 +18,7 @@ int main(int argc, char** argv)
     const size_t nblocks=10;
     if(!dim%nblocks)
         throw std::runtime_error("length is not evenly divisible by nblocks");
+#ifdef ENABLE_tiledarray
     const size_t parts=dim/nblocks;
     RunTime rt(argc,argv);
 
@@ -25,7 +26,6 @@ int main(int argc, char** argv)
     auto j=make_index("j");
     auto k=make_index("k");
     auto l=make_index("l");
-#ifdef ENABLE_tiledarray
     using namespace TiledArray;
     TA::World& world = TA::get_default_world();
     {

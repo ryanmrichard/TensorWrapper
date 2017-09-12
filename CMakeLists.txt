@@ -44,8 +44,11 @@ set(XXX "Eigen3" "GAXX" "tiledarray")
 #BACKENDS is the sublist of XXX that is only the ones that are turned on.
 foreach(x ${XXX})
     if(${ENABLE_${x}})
-        set(BACKENDS ${BACKENDS} ${x})
+        set(BACKENDS_ON ${BACKENDS_ON} ${x})
         message(STATUS "${x} backend is enabled.")
+    else()
+        set(BACKENDS_OFF ${BACKENDS_OFF} ${x})
+        message(STATUS "${x} backend is disabled")
     endif()
 endforeach()
 
@@ -79,6 +82,7 @@ ExternalProject_Add(TensorWrapper
                -DCBLAS_INCLUDE_FILE=${CBLAS_INCLUDE_FILE}
                -DLAPACKE_INCLUDE_DIR=${LAPACKE_INCLUDE_DIR}
                -DLAPACKE_INCLUDE_FILE=${LAPACKE_INCLUDE_FILE}
+               -DHAVE_MKL=${HAVE_MKL}
     BUILD_ALWAYS 1
     INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install DESTDIR=${STAGE_DIR}
     CMAKE_CACHE_ARGS -DCMAKE_PREFIX_PATH:LIST=${CMAKE_PREFIX_PATH}
@@ -87,10 +91,11 @@ ExternalProject_Add(TensorWrapper
                      -DCMAKE_MODULE_PATH:LIST=${CMAKE_MODULE_PATH}
                      -DCBLAS_LIBRARIES:LIST=${CBLAS_LIBRARIES}
                      -DLAPACKE_LIBRARIES:LIST=${LAPACKE_LIBRARIES}
-                     -DBACKENDS:LIST=${BACKENDS}
+                     -DBACKENDS_ON:LIST=${BACKENDS_ON}
+                     -DBACKENDS_OFF:LIST=${BACKENDS_OFF}
 )
 
-foreach(x ${BACKENDS})
+foreach(x ${BACKENDS_ON})
     add_dependencies(TensorWrapper ${x}_external)
 endforeach()
 
