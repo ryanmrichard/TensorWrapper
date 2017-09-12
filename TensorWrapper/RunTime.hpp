@@ -14,7 +14,7 @@ namespace TWrapper {
 class RunTime{
 public:
 
-    RunTime(int argc=0, char** argv=nullptr, MPI_Comm comm=MPI_COMM_WORLD)
+    RunTime(int argc=0, char** argv=nullptr)
     {
     #ifdef ENABLE_tiledarray
         TiledArray::initialize(argc,argv);
