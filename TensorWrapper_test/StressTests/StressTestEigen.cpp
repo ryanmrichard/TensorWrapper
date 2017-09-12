@@ -1,4 +1,3 @@
-#define EIGEN_USE_MKL_ALL
 #include <TensorWrapper/TensorWrapper.hpp>
 #include "TestHelpers.hpp"
 

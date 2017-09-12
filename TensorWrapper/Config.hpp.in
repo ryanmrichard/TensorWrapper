@@ -20,6 +20,7 @@
 
 #if @ENABLE_Eigen3@
    #define ENABLE_EIGEN
+   #define EIGEN_USE_THREADS
 #endif
 
 #if @ENABLE_GAXX@
