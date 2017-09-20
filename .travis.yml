@@ -19,7 +19,8 @@ matrix:
         - mercurial
     env: CXX_COMPILER='g++-5'
 install:
-- hg clone https://bitbucket.org/eigen/eigen/
+- hg clone https://bitbucket.org/ryan_richard/eigen
+- hg update blas_header
 - cd eigen
 - cmake
   -H.
