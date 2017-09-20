@@ -1,6 +1,8 @@
 TensorWrapper
 =============
 
+[![Join the chat at https://gitter.im/TensorWrapper/Lobby](https://badges.gitter.im/TensorWrapper/Lobby.svg)](https://gitter.im/TensorWrapper/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [![Documentation](https://codedocs.xyz/ryanmrichard/TensorWrapper.svg)](https://codedocs.xyz/ryanmrichard/TensorWrapper/)
 [![Build Status](https://travis-ci.org/ryanmrichard/TensorWrapper.svg?branch=master)](https://travis-ci.org/ryanmrichard/TensorWrapper)
 
