@@ -22,8 +22,6 @@ install:
 - hg clone https://bitbucket.org/ryan_richard/eigen
 - cd eigen
 - hg update blas_header
-- ls /usr/include
-- ls /usr/include/mpich
 - cmake
   -H.
   -Bbuild
