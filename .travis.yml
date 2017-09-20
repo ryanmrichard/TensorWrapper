@@ -15,18 +15,19 @@ matrix:
         - g++-5
         - libblas-dev
         - liblapacke-dev
-        - libmpich2-dev
+        - libopenmpi-dev
         - mercurial
     env: CXX_COMPILER='g++-5'
 install:
 - hg clone https://bitbucket.org/ryan_richard/eigen
 - cd eigen
 - hg update blas_header
+- ls /usr/include
+- ls /usr/include/mpich
 - cmake
   -H.
   -Bbuild
   -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
-  -DCMAKE_PREFIX_PATH=/usr/include/mpich
   -DCMAKE_BUILD_TYPE=Release
   -DCMAKE_INSTALL_PREFIX=${HOME}
 - cd build && make install
