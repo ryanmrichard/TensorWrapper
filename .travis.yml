@@ -26,6 +26,7 @@ install:
   -H.
   -Bbuild
   -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
+  -DCMAKE_PREFIX_PATH=/usr/include/mpich
   -DCMAKE_BUILD_TYPE=Release
   -DCMAKE_INSTALL_PREFIX=${HOME}
 - cd build && make install
