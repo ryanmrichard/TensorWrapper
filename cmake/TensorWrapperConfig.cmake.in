@@ -30,6 +30,17 @@ foreach(pkg @BACKENDS_ON@)
                                    ${${PKG}_INCLUDE_DIRS})
 endforeach()
 
+find_package(MPI)
+if(${MPI_CXX_FOUND})
+   set(TENSORWRAPPER_LIBRARIES ${TENSORWRAPPER_LIBRARIES}
+                               ${MPI_CXX_LIBRARIES}
+   )
+   set(TENSORWRAPPER_INCLUDE_DIRS ${TENSORWRAPPER_INCLUDE_DIRS}
+                                   ${MPI_CXX_INCLUDE_DIRS}
+   )
+endif()
+
+
 set(TENSORWRAPPER_LIBRARIES ${TENSORWRAPPER_LIBRARIES}
                             ${CBLAS_LIBRARIES}
                             ${LAPACKE_LIBRARIES}
