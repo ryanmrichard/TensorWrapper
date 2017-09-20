@@ -20,11 +20,6 @@ set(TENSORWRAPPER_INCLUDE_DIRS ${TENSORWRAPPER_INCLUDE_DIR}
                                ${LAPACKE_INCLUDE_DIR}
 )
 
-set(TENSORWRAPPER_LIBRARIES ${CBLAS_LIBRARIES}
-                            ${LAPACKE_LIBRARIES}
-)
-
-
 #Find external dependencies
 foreach(pkg @BACKENDS_ON@)
     find_package(${pkg} REQUIRED)
@@ -35,7 +30,10 @@ foreach(pkg @BACKENDS_ON@)
                                    ${${PKG}_INCLUDE_DIRS})
 endforeach()
 
-
+set(TENSORWRAPPER_LIBRARIES ${TENSORWRAPPER_LIBRARIES}
+                            ${CBLAS_LIBRARIES}
+                            ${LAPACKE_LIBRARIES}
+)
 
 target_link_libraries(TensorWrapper INTERFACE ${TENSORWRAPPER_LIBRARIES})
 target_include_directories(TensorWrapper INTERFACE

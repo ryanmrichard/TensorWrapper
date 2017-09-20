@@ -12,7 +12,6 @@ extern "C" {
     _Pragma("GCC diagnostic ignored \"-Wenum-compare\"")
     _Pragma("GCC diagnostic ignored \"-Wnarrowing\"")
     _Pragma("GCC diagnostic ignored \"-Wsign-compare\"")
-
 #endif
 
 

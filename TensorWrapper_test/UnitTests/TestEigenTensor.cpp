@@ -25,20 +25,13 @@ int main()
     //Get/Set memory
     auto mem=impl.get_memory(A);
     tester.test("NBlocks",mem.nblocks()==1);
-    std::vector<double> corr_mem(100,3.0);
     tester.test("Memory contents",mem.block(0)==A.data());
-    for(size_t i=5;i<10;++i)
-        for(size_t j=0;j<5;++j)
-        {
-            mem.block(0)[j*10+i]=4.0;
-            corr_mem[j*10+i]=4.0;
-        }
 
     eigen_tensor B=impl.allocate(dims);
     impl.set_memory(B,mem);
     auto mem2=impl.get_memory(B);
     tester.test("Set memory",
-                std::equal(corr_mem.begin(),corr_mem.end(),mem2.block(0)));
+                std::equal(A.data(),A.data()+100,mem2.block(0)));
 
     //Equality
     tester.test("Are equal",impl.are_equal(A,A));
@@ -57,7 +50,7 @@ int main()
     auto j=make_index("j");
     auto k=make_index("k");
     auto l=make_index("l");
-    using idx_ii=detail_::make_indices<decltype(i),decltype(i)>;
+    //using idx_ii=detail_::make_indices<decltype(i),decltype(i)>;
     using idx_ij=detail_::make_indices<decltype(i),decltype(j)>;
     using idx_ik=detail_::make_indices<decltype(i),decltype(k)>;
     using idx_ji=detail_::make_indices<decltype(j),decltype(i)>;
@@ -97,9 +90,9 @@ int main()
     tester.test("Permutation",impl.are_equal(C,D));
 
     //Trace
-    Eigen::Tensor<double,0> x=A.trace(std::array<int,2>{0,1});
-    Eigen::Tensor<double,0> y=impl.trace<idx_ii>(A);
-    tester.test("Trace of A",impl.are_equal(x,y));
+    //Eigen::Tensor<double,0> x=A.trace(std::array<int,2>{0,1});
+    //Eigen::Tensor<double,0> y=impl.trace<idx_ii>(A);
+    //tester.test("Trace of A",impl.are_equal(x,y));
 
     //Contraction
     D=A.contract(B,idx_array<1>{idx_t{1,0}});

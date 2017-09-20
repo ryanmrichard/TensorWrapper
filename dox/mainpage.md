@@ -26,3 +26,4 @@ These are topics targeting people who want to contribute to the TensorWrapper
 project.
 
 - [Adding a Backend](@ref NewBackend.md)
+- [Flattening Tensors](@ref FlattingTensors.md)

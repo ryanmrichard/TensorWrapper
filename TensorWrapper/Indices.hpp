@@ -656,12 +656,14 @@ std::string stringify_impl(C_String<Cs...>)
 }
 
 template<typename...Args>
-std::string stringify(const Indices<Args...>&)
+std::string stringify(const Indices<Args...>&,std::string spacer=",")
 {
     std::array<std::string,sizeof...(Args)> buffer{stringify_impl(Args())...};
     std::string rv;
+    if(buffer.size()==0)
+        return rv;
     for(size_t i=0;i<buffer.size()-1;++i)
-        rv+=buffer[i]+",";
+        rv+=buffer[i]+spacer;
     rv+=buffer[buffer.size()-1];
     return rv;
 }

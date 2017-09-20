@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.2)
 project(TensorWrapper-Core CXX)
 include(${TWRAPPER_ROOT}/cmake/cmake_macros.cmake)
 
-find_package(MPI)
+find_package(MPI REQUIRED)
 
 #C-ify some variables
 foreach(pkg ${BACKENDS_ON})
@@ -18,13 +18,12 @@ else()
     set(HAVE_MKL 0)
 endif()
 
-if(${FOUND_MPI})
+if(${MPI_CXX_FOUND})
     set(HAVE_MPI 1)
 else()
     set(HAVE_MPI 0)
 endif()
 
-#Header-only so nothing to do besides...
 
 # Install all headers
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"

@@ -1,4 +1,6 @@
-#include <TensorWrapper/TensorWrapper.hpp>
+#include <TensorWrapper/Config.hpp>
+#include <TensorWrapper/TensorImpl/EigenMatrixWrapper.hpp>
+#include <TensorWrapper/Indices.hpp>
 #include "TestHelpers.hpp"
 
 using namespace TWrapper;

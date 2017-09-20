@@ -28,10 +28,6 @@ private:
             const auto& temp=ptr.template cast<T2>();
             TensorWrapperImpl<R,T,T1> impl;
             TensorWrapperImpl<R,T,T2> impl2;
-
-            /* TODO: remove const_cast when MemoryBlock is made into an iterator
-             */
-
             auto& t=const_cast<typename TensorWrapperImpl<R,T,T2>::type&>(temp);
             auto rv=impl.allocate(impl2.dims(t).dims());
             impl.set_memory(rv,impl2.get_memory(t));

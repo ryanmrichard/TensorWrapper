@@ -29,7 +29,8 @@ find_package(CBLASLAPACKE REQUIRED)
 #
 ################################################################################
 
-
+#Enable Cyclops Tensor Framework
+option_w_default(ENABLE_CTF FALSE)
 #Enable Eigen backend?
 #Warning: things probably won't work if you disable this one
 option_w_default(ENABLE_Eigen3 TRUE)
@@ -39,7 +40,7 @@ option_w_default(ENABLE_GAXX FALSE)
 option_w_default(ENABLE_tiledarray FALSE)
 
 #List of all backends we know about.  Add new ones here.
-set(XXX "Eigen3" "GAXX" "tiledarray")
+set(XXX "CTF" "Eigen3" "GAXX" "tiledarray")
 
 #BACKENDS is the sublist of XXX that is only the ones that are turned on.
 foreach(x ${XXX})
