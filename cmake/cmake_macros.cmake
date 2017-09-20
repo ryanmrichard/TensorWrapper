@@ -51,3 +51,12 @@ function(my_add_subdirectory dir_name)
      endforeach()
      set(${dir_name}_SRC ${${dir_name}_SRC_TMP} PARENT_SCOPE)
  endfunction()
+
+ #Function for c-ify a variable for inclusion in the Config.hpp file
+ function(c_ify in_var out_var)
+     if(${${in_var}})
+         set(${out_var} 1 PARENT_SCOPE)
+     else()
+         set(${out_var} 0 PARENT_SCOPE)
+     endif()
+ endfunction()
