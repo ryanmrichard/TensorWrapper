@@ -1,4 +1,5 @@
 #pragma once
+#include "TensorWrapper/TensorImpl/TensorTypes.hpp"
 #include <cstddef>
 #include <type_traits>
 

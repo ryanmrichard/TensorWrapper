@@ -53,7 +53,7 @@ namespace TWrapper {
  *  because their semantics are somewhat non-intuitive.  From the user's
  *  perspective this class is a uniform API to the raw memory so copying should
  *  be shallow to ensure that two instances of this class which are associated
- *  with the same tensor really are proviging an API to the same memory.  On the
+ *  with the same tensor really are providing an API to the same memory.  On the
  *  other hand, if this class is managing memory then we would be expected to
  *  shallow copy everything, but the unique pointers.  This however would
  *  produce a data race in that if the original instance is deleted the pointers
@@ -66,100 +66,19 @@ namespace TWrapper {
  */
 template<size_t rank, typename T>
 class MemoryBlock{
-    ///The type of an index
-    using array_t=std::array<size_t,rank>;
-
-    ///The pointers to the local memory
-    std::vector<T*> buffers_;
-
-    ///If the tensor doesn't expose T* these are the managed blocks
-    std::vector<std::unique_ptr<T[]>> memory_;
-
-    ///These are the shapes of each block
-    std::vector<Shape<rank>> shapes_;
-
-    ///These are the starting indices of each block
-    std::vector<array_t> starts_;
-
-    ///These are the ending indices of each block
-    std::vector<array_t> end_;
-
-    /** \brief An interator capable of returning the indices of a chunk of
-     *  memory in the order they are laid out in in memory.
-     *
-     */
-    class MemoryBlockIterator{
-        using ShapeItr=typename Shape<rank>::const_iterator;
-
-        std::array<ShapeItr,2> shape_itrs_;
-
-        const array_t& start_;
-
-        const array_t& end_;
-
-        template<size_t...Is>
-        array_t make_array(std::index_sequence<Is...>)const
-        {
-            const auto& off=*(shape_itrs_[0]);
-            return array_t{(start_[Is]+off[Is])...};
-        }
-
-    public:
-
-        MemoryBlockIterator(ShapeItr begin, ShapeItr end, const array_t& start,
-                            const array_t& finish)noexcept:
-            shape_itrs_{begin,end},start_(start),end_(finish){}
-
-        MemoryBlockIterator(const MemoryBlockIterator&)=default;
-
-        array_t operator*()const
-        {
-            return make_array(std::make_index_sequence<rank>());
-        }
-
-        MemoryBlockIterator& operator++()
-        {
-            ++shape_itrs_[0];
-            return *this;
-        }
-
-        MemoryBlockIterator operator++(int)
-        {
-            MemoryBlockIterator rv(*this);
-            ++shape_itrs_[0];
-            return rv;
-        }
-
-        bool operator<(const MemoryBlockIterator& other)const
-        {
-            return *(*this)<*other;
-        }
-
-        bool operator==(const MemoryBlockIterator& other)const
-        {
-            return std::tie(shape_itrs_,start_,end_)==
-                   std::tie(other.shape_itrs_,other.start_,other.end_);
-        }
-
-        bool operator!=(const MemoryBlockIterator& other)const
-        {
-            return !((*this)==other);
-        }
-
-
-    };
-
-
 public:
+    ///The type of an index
+    using index_type=std::array<size_t,rank>;
+
     ///The type of an iterator over the managed blocks
-    using const_iterator=MemoryBlockIterator;
+    using const_iterator=IndexItr<rank>;
 
     /** \brief Makes a new MemoryBlock instance that contains no blocks of
      *  memory.
      *
      *  \throws None.  No throw guarantee.
      */
-    MemoryBlock()noexcept=default;
+    MemoryBlock()noexcept{}
 
     //See class documentation for why these are deleted
     MemoryBlock(const MemoryBlock<rank,T>&)=delete;
@@ -171,7 +90,11 @@ public:
      *  \param[in] other The instance to take the state of.
      *  \throws None.  No throw gurantee.
      */
-    MemoryBlock(MemoryBlock<rank,T>&& /*other*/)noexcept=default;
+    MemoryBlock(MemoryBlock<rank,T>&& other)noexcept:
+        buffers_(std::move(other.buffers_)),
+        memory_(std::move(other.memory_)),
+        shapes_(std::move(other.shapes_))
+    {}
 
     /** \brief Makes a new MemoryBlock by taking the contents of another
      *   instance.
@@ -181,14 +104,20 @@ public:
      *  \returns The current instance after taking the state of \p other.
      *  \throws None.  No throw gurantee.
      */
-    MemoryBlock<rank,T>& operator=(MemoryBlock&& /*other*/)noexcept=default;
+    MemoryBlock<rank,T>& operator=(MemoryBlock&& other)noexcept
+    {
+        buffers_=std::move(other.buffers_);
+        memory_=std::move(other.memory_);
+        shapes_=std::move(other.shapes_);
+        return *this;
+    }
 
     /** \brief Frees up resources of the class.
      *
      *  If this class owned the memory all pointers to it are now invalidated.
      *  \throws None. No throw guarantee.
      */
-    ~MemoryBlock()noexcept=default;
+    ~MemoryBlock()noexcept{}
 
     /** \brief Adds a new block to the instance.
      *
@@ -197,21 +126,16 @@ public:
      *
      * \param[in] mem A pointer to the contigious memory.
      * \param[in] shape A Shape instance describing the layout of the memory
-     * \param[in] start The index in the overall tensor that the first element
-     *                  of \p mem maps to.
-     * \param[in] end The index in the overall tensor that the last element of
-     *                \p mem maps to.
+
      * \throws std::bad_alloc if resisizing the internal \p std::vectors fails.
      *         Weak throw guarantee.
      *
      */
-    void add_block(T* mem, const Shape<rank>& shape, const array_t& start,
-                   const array_t& end)
+    void add_block(T* mem,
+                   const Shape<rank>& shape)
     {
         buffers_.push_back(mem);
         shapes_.push_back(shape);
-        starts_.push_back(start);
-        end_.push_back(end);
     }
 
     /** \brief Adds a new block to the instance transferring memory ownership.
@@ -230,12 +154,11 @@ public:
      * \throws std::bad_alloc if resisizing the internal \p std::vectors fails.
      *         Weak throw guarantee.
      */
-    void add_block(std::unique_ptr<T[]>&& mem, const Shape<rank>& shape,
-                   const array_t& start, const array_t& end)
+    void add_block(std::unique_ptr<T[]>&& mem, const Shape<rank>& shape)
     {
         T* _mem=mem.get();
         memory_.push_back(std::move(mem));
-        add_block(_mem,shape,start,end);
+        add_block(_mem,shape);
     }
 
     /** \brief Returns the number of blocks currently managed by this instance.
@@ -267,12 +190,9 @@ public:
      *  \returns An iterator set to the first index of a block.
      *  \throws None.  No throw gurantee.
      */
-    const_iterator begin(size_t blocki)const noexcept
+    virtual const_iterator begin(size_t blocki)const noexcept
     {
-        return const_iterator(shapes_[blocki].begin(),
-                              shapes_[blocki].end(),
-                              starts_[blocki],
-                              end_[blocki]);
+        return shapes_[blocki].begin();
     }
 
     /** \brief Returns an iterator to just past the last index of a specified
@@ -288,11 +208,30 @@ public:
      */
     const_iterator end(size_t blocki)const noexcept
     {
-        return const_iterator(shapes_[blocki].end(),
-                              shapes_[blocki].end(),
-                              starts_[blocki],
-                              end_[blocki]);
+        return shapes_[blocki].end();
     }
+
+private:
+
+    ///The type of an index
+    using array_t=std::array<size_t,rank>;
+
+    ///The pointers to the local memory
+    std::vector<T*> buffers_;
+
+    ///If the tensor doesn't expose T* these are the managed blocks
+    std::vector<std::unique_ptr<T[]>> memory_;
+
+    ///These are the shapes of each block
+    std::vector<Shape<rank>> shapes_;
+
 };
+
+#ifdef BUILD_TWRAPPER_LIBRARY
+extern template class MemoryBlock<1,double>;
+extern template class MemoryBlock<2,double>;
+extern template class MemoryBlock<3,double>;
+extern template class MemoryBlock<4,double>;
+#endif
 
 }

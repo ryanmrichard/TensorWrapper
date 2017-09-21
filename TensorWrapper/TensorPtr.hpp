@@ -28,10 +28,6 @@ private:
             const auto& temp=ptr.template cast<T2>();
             TensorWrapperImpl<R,T,T1> impl;
             TensorWrapperImpl<R,T,T2> impl2;
-
-            /* TODO: remove const_cast when MemoryBlock is made into an iterator
-             */
-
             auto& t=const_cast<typename TensorWrapperImpl<R,T,T2>::type&>(temp);
             auto rv=impl.allocate(impl2.dims(t).dims());
             impl.set_memory(rv,impl2.get_memory(t));
@@ -105,7 +101,7 @@ public:
      *
      *  \throws No throw guarantee.
      */
-    TensorPtr()noexcept=default;
+    TensorPtr()noexcept{}
 
     /** \brief Releases the memory associated with this instance.
      *
@@ -113,7 +109,7 @@ public:
      *
      * \throws If the backend's destructor throws.
      */
-    ~TensorPtr()=default;
+    ~TensorPtr(){}
 
     /** \brief Makes a TensorPtr from a backend's instance.
      *
@@ -172,14 +168,22 @@ public:
      *  \param[in] other The tensor to take ownership of.
      *  \throws No throw guarantee.
      */
-    TensorPtr(TensorPtr&&)noexcept=default;
+    TensorPtr(TensorPtr&& other)noexcept:
+        tensor_(std::move(other.tensor_)),
+        type_(std::move(other.type_))
+   {}
 
     /** \brief Takes ownership of other TensorPtr's tensor
      *
      *  \param[in] other The tensor to take ownership of.
      *  \throws No throw guarantee.
      */
-    TensorPtr& operator=(TensorPtr&&)noexcept=default;
+    TensorPtr& operator=(TensorPtr&& other)noexcept
+    {
+        tensor_=std::move(other.tensor_);
+        type_=std::move(other.type_);
+        return *this;
+    }
 
     /** \brief Returns the type of the wrapped tensor.
      *
@@ -251,10 +255,11 @@ public:
     }
 };
 
-/* Explicit instantiation of common use cases */
-template class TensorPtr<1,double>;
-template class TensorPtr<2,double>;
-template class TensorPtr<3,double>;
+#ifdef BUILD_TWRAPPER_LIBRARY
+extern template class TensorPtr<1,double>;
+extern template class TensorPtr<2,double>;
+extern template class TensorPtr<3,double>;
+#endif
 
 /** \brief Partial specialization of the Convert operation to TensorPtrs
  *

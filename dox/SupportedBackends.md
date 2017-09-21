@@ -4,6 +4,31 @@ Supported Backends
 At the moment TensorWrapper supports the following backends subject to the
 caveats laid out in each section.
 
+Cyclops Tensor Framework
+------------------------
+
+Project homepage is [here](https://github.com/solomonik/ctf)
+
+Cyclops Tensor Framework (CTF) is both a shared and distributed memory tensor
+library.  CTF's claim to fame is its use of a cyclic data structure to store
+the tensor (*i.e.* the first element of the tensor goes to process 0, the second
+to process 1, the third to process 2, *etc.*).  Admittedly other tensor
+libraries support this structure, but it is usually a somewhat buried option as
+opposed to the default.
+
+### Notes on the Wrapping
+
+- By default CTF does not support installing and expects you to use the code out
+  of the build directory.  Unfortunately, the build directory is a mess in that
+  it includes object files and other assorted odds and ends that don't belong in
+  an installation.  We recommend you let TensorWrapper build CTF so that the
+  result is installable.
+- CTF is not const correct with member functions of the tensor class (either
+  that or expressions like: `C["ij"]=A["ij"]+B["ij"]` really do modify A and B).
+  The result is a lot of `const_cast`'s are needed in the wrapper.  We point
+  this out as a disclaimer because if the `const_cast`'s aren't valid you are
+  likely to get some weird errors (based on our .
+
 Eigen
 -----
 

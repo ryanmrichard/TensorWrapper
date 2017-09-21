@@ -1,8 +1,9 @@
-//This file meant from inclusion only from TensorImpls.hpp
-#include <Eigen/Dense>
-#include <unsupported/Eigen/CXX11/Tensor>
-#include <map>
+#pragma once
+#include "TensorWrapper/TensorImpl/TensorWrapperImpl.hpp"
 #include "TensorWrapper/TensorImpl/ContractionHelper.hpp"
+#include <Eigen/Dense>
+#include <utility>
+
 namespace TWrapper {
 namespace detail_ {
 
@@ -286,7 +287,7 @@ struct TensorWrapperImpl<R,T,TensorTypes::EigenMatrix> {
     auto get_memory(Tensor_t& impl)const{
         MemoryBlock<R,T> rv;
         auto x=GetMemoryImpl<R,T>::eval(impl);
-        rv.add_block(x,dims(impl),std::array<size_t,R>{},dims(impl).dims());
+        rv.add_block(x,dims(impl));
         return rv;
     }
 

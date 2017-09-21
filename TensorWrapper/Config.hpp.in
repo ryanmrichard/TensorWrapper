@@ -11,11 +11,18 @@
 //   #define EIGEN_USE_LAPACKE
 #endif
 
+#if @BUILDING_LIBRARY@
+  #define BUILD_TWRAPPER_LIBRARY
+#endif
+
 #if @HAVE_MPI@
    #include<mpi.h>
 #else
    using MPI_Comm=int;
    const int MPI_COMM_WORLD=10000;
+#endif
+#if @ENABLE_CTF@
+   #define ENABLE_CTF
 #endif
 
 #if @ENABLE_Eigen3@

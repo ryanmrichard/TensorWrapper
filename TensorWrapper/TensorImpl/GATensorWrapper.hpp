@@ -1,6 +1,7 @@
-//This file meant from inclusion only from TensorImpls.hpp
-#include <ga_cxx/GATensor.hpp>
+#pragma once
+#include "TensorWrapper/TensorImpl/TensorWrapperImpl.hpp"
 #include "TensorWrapper/TensorImpl/ContractionHelper.hpp"
+#include <ga_cxx/GATensor.hpp>
 
 namespace TWrapper {
 namespace detail_ {
@@ -49,14 +50,11 @@ struct TensorWrapperImpl<rank,T,TensorTypes::GlobalArrays> {
         array_t start,end;
         std::tie(start,end)=impl.my_slice();
         auto mem=impl.get_values(start,end);
-        array_t block_dims;
-        std::transform(end.begin(),end.end(),
-                       start.begin(),block_dims.begin(),std::minus<size_t>());
-        Shape<rank> my_shape(block_dims,true);
+        Shape<rank> my_shape(end,true,start);
         MemoryBlock<rank,T> rv;
         std::unique_ptr<T[]> ptr(new T[my_shape.size()]);
         std::copy(mem.begin(),mem.end(),ptr.get());
-        rv.add_block(std::move(ptr),my_shape,start,end);
+        rv.add_block(std::move(ptr),my_shape);
         return rv;
     }
 

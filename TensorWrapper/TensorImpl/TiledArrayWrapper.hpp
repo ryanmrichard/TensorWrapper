@@ -1,4 +1,5 @@
 #pragma once
+#include "TensorWrapper/TensorImpl/TensorWrapperImpl.h"
 #include <tiledarray.h>
 
 namespace TWrapper {
@@ -75,7 +76,7 @@ struct TensorWrapperImpl<R,T,TensorTypes::TiledArray> {
             std::unique_ptr<T[]> mem(new T[tile.size()]);
             const T* origin=&tile[0];
             std::copy(origin,origin+tile.size(),mem.get());
-            rv.add_block(std::move(mem),Shape<R>(sizes,true),start,end);
+            rv.add_block(std::move(mem),Shape<R>(end,true,start));
         }
         return rv;
     }

@@ -2,6 +2,9 @@
 #include "TensorWrapper/Config.hpp"
 #include "TensorWrapper/TensorImpl/TensorTypes.hpp"
 #include "TensorWrapper/TensorImpl/TensorWrapperImpl.hpp"
+#ifdef ENABLE_CTF
+    #include "TensorWrapper/TensorImpl/CTFWrapper.hpp"
+#endif
 #ifdef ENABLE_EIGEN
     #include "TensorWrapper/TensorImpl/EigenMatrixWrapper.hpp"
     #include "TensorWrapper/TensorImpl/EigenTensorWrapper.hpp"

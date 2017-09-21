@@ -1,7 +1,8 @@
 #pragma once
-#include <array>
 #include "TensorWrapper/Shape.hpp"
 #include "TensorWrapper/MemoryBlock.hpp"
+#include "TensorWrapper/TensorImpl/TensorTypes.hpp"
+#include "TensorWrapper/Indices.hpp"
 
 namespace TWrapper {
 namespace detail_ {

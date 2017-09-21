@@ -10,6 +10,8 @@ include(cmake/cmake_macros.cmake)
 
 #Should we build the stress tests?
 option_w_default(BUILD_TESTS TRUE)
+#Are we building a library
+option_w_default(BUILD_LIBRARY FALSE)
 #Debug or Release build?
 option_w_default(CMAKE_BUILD_TYPE "Release")
 
@@ -18,6 +20,13 @@ option_w_default(CMAKE_BUILD_TYPE "Release")
 ################################################################################
 
 find_package(CBLASLAPACKE REQUIRED)
+
+################################################################################
+# Parallel Dependencies
+################################################################################
+
+find_package(MPI REQUIRED)
+
 
 ################################################################################
 # Backends
@@ -29,7 +38,8 @@ find_package(CBLASLAPACKE REQUIRED)
 #
 ################################################################################
 
-
+#Enable Cyclops Tensor Framework
+option_w_default(ENABLE_CTF FALSE)
 #Enable Eigen backend?
 #Warning: things probably won't work if you disable this one
 option_w_default(ENABLE_Eigen3 TRUE)
@@ -39,7 +49,7 @@ option_w_default(ENABLE_GAXX FALSE)
 option_w_default(ENABLE_tiledarray FALSE)
 
 #List of all backends we know about.  Add new ones here.
-set(XXX "Eigen3" "GAXX" "tiledarray")
+set(XXX "CTF" "Eigen3" "GAXX" "tiledarray")
 
 #BACKENDS is the sublist of XXX that is only the ones that are turned on.
 foreach(x ${XXX})
@@ -77,11 +87,13 @@ ExternalProject_Add(TensorWrapper
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+               -DMPI_CXX_COMPILER=${MPI_CXX_COMPILER}
                -DTWRAPPER_ROOT=${CMAKE_CURRENT_SOURCE_DIR}
                -DCBLAS_INCLUDE_DIR=${CBLAS_INCLUDE_DIR}
                -DCBLAS_INCLUDE_FILE=${CBLAS_INCLUDE_FILE}
                -DLAPACKE_INCLUDE_DIR=${LAPACKE_INCLUDE_DIR}
                -DLAPACKE_INCLUDE_FILE=${LAPACKE_INCLUDE_FILE}
+               -DBUILD_LIBRARY=${BUILD_LIBRARY}
                -DHAVE_MKL=${HAVE_MKL}
     BUILD_ALWAYS 1
     INSTALL_COMMAND ${CMAKE_MAKE_PROGRAM} install DESTDIR=${STAGE_DIR}
@@ -109,9 +121,6 @@ if(${BUILD_TESTS})
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/test_stage
                    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                    -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-                   -DSTAGE_DIR=${STAGE_DIR}
-                   -DTENSORWRAPPER_PREFIX=${TENSORWRAPPER_PREFIX}
-                   -DENABLE_STRESS_TESTS=${ENABLE_STRESS_TESTS}
         BUILD_ALWAYS 1
         CMAKE_CACHE_ARGS -DCMAKE_PREFIX_PATH:LIST=${CMAKE_PREFIX_PATH}
                          -DCMAKE_INSTALL_RPATH:LIST=${CMAKE_INSTALL_RPATH}

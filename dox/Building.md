@@ -55,14 +55,24 @@ CMake variables, but are specific to TensorWrapper.
 --------------------------------------------------------------------------------
 | Option Name       |  Description                                             |
 | :---------------: | :--------------------------------------------------------|
-| BUILD_TESTS       | Build test cases? Increases build time                   |
+| BUILD_TESTS       | Build test cases? Increases build time.  Default=True    |
+| BUILD_LIBRARY     | Build library of common classes? Default=False           |
+| ENABLE_CTF        | Build Cyclops Tensor Framework bindings? Default=False   |
 | ENABLE_Eigen3     | Build Eigen bindings? Must be enabled at this time       |
-| ENABLE_GAXX       | Build TensorWrapper bindings to my GlobalArrays C++ API? |
-| ENABLE_tiledarray | Build the TensorWrapper TiledArray bindings?             |
+| ENABLE_GAXX       | Build bindings to my GlobalArrays C++ API? Default=False |
+| ENABLE_tiledarray | Build the TiledArray bindings? Default=False             |
 --------------------------------------------------------------------------------
 
 Note:  I realize the inconsistent case of the various backends is annoying;
 however, the case is determined by the backend's CMake infrastructure.
+
+Of these options probably only the `BUILD_LIBRARY` option needs explaining.
+By default TensorWrapper is a header only library.  What this means is the
+compiler is forced to instantiate a template everytime it sees it.  This bloats
+your binaries and can make your compile time balloon.  If this option is enabled
+several common variations of the templated classes will be instantiated and
+placed in a library.  You will need to link against this library or else you
+will get undefined symbols.
 
 
 Math Libraries

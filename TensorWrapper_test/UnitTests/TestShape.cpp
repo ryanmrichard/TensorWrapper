@@ -1,118 +1,73 @@
 #include <TensorWrapper/Shape.hpp>
-#include<vector>
 #include "TestHelpers.hpp"
 
 using namespace TWrapper;
 
-const std::vector<std::array<size_t,1>> corr_D1_rowmajor({
-    {0,},{1,},{2,},{3,},{4,},{5,},{6,},{7,},{8,},{9,},
-});
-
-const std::vector<std::array<size_t,2>> corr_D2_rowmajor({
-    {0,0,},{0,1,},{0,2,},{0,3,},{0,4,},{1,0,},{1,1,},{1,2,},{1,3,},{1,4,},
-    {2,0,},{2,1,},{2,2,},{2,3,},{2,4,},{3,0,},{3,1,},{3,2,},{3,3,},{3,4,},
-    {4,0,},{4,1,},{4,2,},{4,3,},{4,4,},{5,0,},{5,1,},{5,2,},{5,3,},{5,4,},
-    {6,0,},{6,1,},{6,2,},{6,3,},{6,4,},{7,0,},{7,1,},{7,2,},{7,3,},{7,4,},
-    {8,0,},{8,1,},{8,2,},{8,3,},{8,4,},{9,0,},{9,1,},{9,2,},{9,3,},{9,4,}
-});
-
-const std::vector<std::array<size_t,2>> corr_D2_colmajor({
-{0,0},{1,0},{2,0},{3,0},{4,0},{5,0},{6,0},{7,0},{8,0},{9,0},{0,1},{1,1},{2,1},
-{3,1},{4,1},{5,1},{6,1},{7,1},{8,1},{9,1},{0,2},{1,2},{2,2},{3,2},{4,2},{5,2},
-{6,2},{7,2},{8,2},{9,2},{0,3},{1,3},{2,3},{3,3},{4,3},{5,3},{6,3},{7,3},{8,3},
-{9,3},{0,4},{1,4},{2,4},{3,4},{4,4},{5,4},{6,4},{7,4},{8,4},{9,4},
-});
-
-const std::vector<std::array<size_t,3>> corr_D3_rowmajor(
-{
-{0,0,0},{0,0,1},{0,0,2},{0,1,0},{0,1,1},{0,1,2},{0,2,0},{0,2,1},{0,2,2},{1,0,0},
-{1,0,1},{1,0,2},{1,1,0},{1,1,1},{1,1,2},{1,2,0},{1,2,1},{1,2,2},{2,0,0},{2,0,1},
-{2,0,2},{2,1,0},{2,1,1},{2,1,2},{2,2,0},{2,2,1},{2,2,2}
-});
-
-const std::vector<std::array<size_t,3>> corr_D3_colmajor({
-{0,0,0},{1,0,0},{2,0,0},{0,1,0},{1,1,0},{2,1,0},{0,2,0},{1,2,0},{2,2,0},{0,0,1},
-{1,0,1},{2,0,1},{0,1,1},{1,1,1},{2,1,1},{0,2,1},{1,2,1},{2,2,1},{0,0,2},{1,0,2},
-{2,0,2},{0,1,2},{1,1,2},{2,1,2},{0,2,2},{1,2,2},{2,2,2}
-});
+template<size_t n>
+using index_t=std::array<size_t,n>;
 
 int main()
 {
     Tester tester("Testing shape class");
 
+    index_t<0> zero0{};
+    index_t<1> vec{10};
+    index_t<2> mat{10,5};
+    index_t<3> tensor{3,3,3};
+
     //Row major testing
-    Shape<0> D0(std::array<size_t,0>({}));
-    Shape<1> D1(std::array<size_t,1>({10}));
-    Shape<2> D2(std::array<size_t,2>({10,5}));
-    Shape<3> D3(std::array<size_t,3>({3,3,3}));
+    Shape<0> D0(zero0),D0cm(zero0,false);
+    Shape<1> D1(vec),D1cm(vec,false);
+    Shape<2> D2(mat),D2cm(mat,false);
+    Shape<3> D3(tensor),D3cm(tensor,false);
+    tester.test("Scalar equality",D0==D0);
+    tester.test("Vector equality",D1==D1);
+    tester.test("Matrix equality",D2==D2);
+    tester.test("Tensor equality",D3==D3);
+    tester.test("Inequality",D0!=D1);
+
     tester.test("Scalar size",D0.size()==1);
     tester.test("Vector size",D1.size()==10);
     tester.test("Matrix size",D2.size()==50);
     tester.test("Tensor size",D3.size()==27);
-    for(auto idx: D0)//Should never actually get into this loop
-    {
-        tester.test("Rank 0 shouldn't iterate",false);
-        std::cout<<idx.size()<<std::endl;//Just to silence the compiler warning
-    }
-    size_t counter=0;
-    for(auto idx: D1)
-    {
-        const auto& corr=corr_D1_rowmajor[counter];
-        tester.test(elem_name(corr),idx==corr);
-        tester.test(elem_name(corr)+" flat",counter==D1.flat_index(corr));
-        ++counter;
-    }
-    counter=0;
-    for(auto idx: D2)
-    {
-        const auto& corr=corr_D2_rowmajor[counter];
-        tester.test(elem_name(corr),idx==corr);
-        tester.test(elem_name(corr)+" flat",counter==D2.flat_index(corr));
-        ++counter;
-    }
-    counter=0;
-    for(auto idx: D3)
-    {
-        const auto& corr=corr_D3_rowmajor[counter];
-        tester.test(elem_name(corr),idx==corr);
-        tester.test(elem_name(corr)+" flat",counter==D3.flat_index(corr));
-        ++counter;
-    }
+    tester.test("Is row major",D0.is_row_major());
 
-    //Column major testing
-    D0=Shape<0>(std::array<size_t,0>({}),false);
-    D1=Shape<1>(std::array<size_t,1>({10}),false);
-    D2=Shape<2>(std::array<size_t,2>({10,5}),false);
-    D3=Shape<3>(std::array<size_t,3>({3,3,3}),false);
-    for(auto idx: D0)//Should never actually get into this loop
-    {
-        tester.test("Rank 0 shouldn't iterate",false);
-        std::cout<<idx.size()<<std::endl;//Just to silence the compiler warning
-    }
-    counter=0;
-    for(auto idx: D1)
-    {
-        //Vector is the same row vs. col
-        const auto& corr=corr_D1_rowmajor[counter];
-        tester.test(elem_name(corr),idx==corr);
-        tester.test(elem_name(corr)+" flat",counter==D1.flat_index(corr));
-        ++counter;
-    }
-    counter=0;
-    for(auto idx: D2)
-    {
-        const auto& corr=corr_D2_colmajor[counter];
-        tester.test(elem_name(corr),idx==corr);
-        tester.test(elem_name(corr)+" flat",counter==D2.flat_index(corr));
-        ++counter;
-    }
-    counter=0;
-    for(auto idx: D3)
-    {
-        const auto& corr=corr_D3_colmajor[counter];
-        tester.test(elem_name(corr),idx==corr);
-        tester.test(elem_name(corr)+" flat",counter==D3.flat_index(corr));
-        ++counter;
-    }
+
+    IndexItr<0> D0begin(zero0),D0end(zero0,false);
+    tester.test("Scalar begin",D0begin==D0.begin());
+    tester.test("Scalar end",D0end==D0.end());
+
+    IndexItr<1> D1begin(vec),D1end(vec,false);
+    tester.test("Vector begin",D1begin==D1.begin());
+    tester.test("Vector end",D1end==D1.end());
+
+    IndexItr<2> D2begin(mat),D2end(mat,false);
+    tester.test("Matrix begin",D2begin==D2.begin());
+    tester.test("Matrix end",D2end==D2.end());
+
+    IndexItr<3> D3begin(tensor),D3end(tensor,false);
+    tester.test("Tensor begin",D3begin==D3.begin());
+    tester.test("Tensor end",D3end==D3.end());
+
+    //column-major testing
+
+
+    IndexItr<0> D0cmbegin(zero0,true,false),D0cmend(zero0,false,false);
+    tester.test("CM Scalar begin",D0cmbegin==D0cm.begin());
+    tester.test("CM Scalar end",D0cmend==D0cm.end());
+    tester.test("CM is row major",!D0cm.is_row_major());
+
+    IndexItr<1> D1cmbegin(vec,true,false),D1cmend(vec,false,false);
+    tester.test("CM Vector begin",D1cmbegin==D1cm.begin());
+    tester.test("CM Vector end",D1cmend==D1cm.end());
+
+    IndexItr<2> D2cmbegin(mat,true,false),D2cmend(mat,false,false);
+    tester.test("CM Matrix begin",D2cmbegin==D2cm.begin());
+    tester.test("CM Matrix end",D2cmend==D2cm.end());
+
+    IndexItr<3> D3cmbegin(tensor,true,false),D3cmend(tensor,false,false);
+    tester.test("CM Tensor begin",D3cmbegin==D3cm.begin());
+    tester.test("CM Tensor end",D3cmend==D3cm.end());
+
     return tester.results();
 }
