@@ -11,6 +11,10 @@
 //   #define EIGEN_USE_LAPACKE
 #endif
 
+#if @BUILDING_LIBRARY@
+  #define BUILD_TWRAPPER_LIBRARY
+#endif
+
 #if @HAVE_MPI@
    #include<mpi.h>
 #else

@@ -15,7 +15,7 @@ matrix:
         - g++-5
         - libblas-dev
         - liblapacke-dev
-        - libopenmpi-dev
+        - mpich2
         - mercurial
     env: CXX_COMPILER='g++-5'
 install:
@@ -36,6 +36,7 @@ script:
   -H.
   -Bbuild
   -DCMAKE_CXX_COMPILER=${CXX_COMPILER}
+  -DMPI_CXX_COMPILER=mpicxx
   -DCMAKE_BUILD_TYPE=Release
   -DCMAKE_PREFIX_PATH=${HOME}
   -DCBLAS_INCLUDE_DIR=/usr/include

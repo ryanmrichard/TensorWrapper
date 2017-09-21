@@ -8,6 +8,8 @@ get_filename_component(TW_PREFIX "${TW_PREFIX}" DIRECTORY) # in root/
 #Main target of this library
 add_library(TensorWrapper INTERFACE)
 set(TENSORWRAPPER_INCLUDE_DIR ${TW_PREFIX}/include)
+set(EXTERNAL_INCLUDE_DIR @TENSORWRAPPER_INCLUDE_DIRS@)
+set(EXTERNAL_LIBRARIES @TENSORWRAPPER_LIBRARIES@)
 
 #The math libraries we were configured with
 set(CBLAS_LIBRARIES @CBLAS_LIBRARIES@)
@@ -16,34 +18,15 @@ set(LAPACKE_LIBRARIES @LAPACKE_LIBRARIES@)
 set(LAPACKE_INCLUDE_DIR @LAPACKE_INCLUDE_DIR@)
 
 set(TENSORWRAPPER_INCLUDE_DIRS ${TENSORWRAPPER_INCLUDE_DIR}
+                               ${EXTERNAL_INCLUDE_DIR}
                                ${CBLAS_INCLUDE_DIR}
                                ${LAPACKE_INCLUDE_DIR}
 )
 
-#Find external dependencies
-foreach(pkg @BACKENDS_ON@)
-    find_package(${pkg} REQUIRED)
-    STRING(TOUPPER ${pkg} PKG)
-    set(TENSORWRAPPER_LIBRARIES ${TENSORWRAPPER_LIBRARIES}
-                                     ${${PKG}_LIBRARIES})
-    set(TENSORWRAPPER_INCLUDE_DIRS ${TENSORWRAPPER_INCLUDE_DIRS}
-                                   ${${PKG}_INCLUDE_DIRS})
-endforeach()
-
-find_package(MPI)
-if(${MPI_CXX_FOUND})
-   set(TENSORWRAPPER_LIBRARIES ${TENSORWRAPPER_LIBRARIES}
-                               ${MPI_CXX_LIBRARIES}
-   )
-   set(TENSORWRAPPER_INCLUDE_DIRS ${TENSORWRAPPER_INCLUDE_DIRS}
-                                   ${MPI_CXX_INCLUDE_DIRS}
-   )
-endif()
-
-
-set(TENSORWRAPPER_LIBRARIES ${TENSORWRAPPER_LIBRARIES}
-                            ${CBLAS_LIBRARIES}
-                            ${LAPACKE_LIBRARIES}
+set(TENSORWRAPPER_LIBRARIES  ${TENSORWRAPPER_LIBRARIES}
+                             ${EXTERNAL_LIBRARIES}
+                             ${CBLAS_LIBRARIES}
+                             ${LAPACKE_LIBRARIES}
 )
 
 target_link_libraries(TensorWrapper INTERFACE ${TENSORWRAPPER_LIBRARIES})
