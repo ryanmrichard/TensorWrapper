@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/pulsar-chem/PulsarLibraryBase
+	branch = master
+	commit = d66324b33c0fc50a179ec9646619fa29e44fbc79
+	parent = 8a152baeb1f06c465394ceaeb7acb1accb1be7c7
+	cmdver = 0.3.1
