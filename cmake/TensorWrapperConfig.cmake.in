@@ -7,6 +7,12 @@ get_filename_component(TW_PREFIX "${TW_PREFIX}" DIRECTORY) # in root/
 
 #Main target of this library
 add_library(TensorWrapper INTERFACE)
+
+
+if(@BUILD_LIBRARY@)
+    set(TENSORWRAPPER_LIBRARY ${TW_PREFIX}/lib/TensorWrapper/libTensorWrapper.so)
+endif()
+
 set(TENSORWRAPPER_INCLUDE_DIR ${TW_PREFIX}/include)
 set(EXTERNAL_INCLUDE_DIR @TENSORWRAPPER_INCLUDE_DIRS@)
 set(EXTERNAL_LIBRARIES @TENSORWRAPPER_LIBRARIES@)
@@ -23,7 +29,8 @@ set(TENSORWRAPPER_INCLUDE_DIRS ${TENSORWRAPPER_INCLUDE_DIR}
                                ${LAPACKE_INCLUDE_DIR}
 )
 
-set(TENSORWRAPPER_LIBRARIES  ${TENSORWRAPPER_LIBRARIES}
+set(TENSORWRAPPER_LIBRARIES  ${TENSORWRAPPER_LIBRARY}
+                             ${TENSORWRAPPER_LIBRARIES}
                              ${EXTERNAL_LIBRARIES}
                              ${CBLAS_LIBRARIES}
                              ${LAPACKE_LIBRARIES}

@@ -153,4 +153,12 @@ private:
 
 };
 
+#ifdef BUILD_TWRAPPER_LIBRARY
+extern template class Shape<0>;
+extern template class Shape<1>;
+extern template class Shape<2>;
+extern template class Shape<3>;
+extern template class Shape<4>;
+#endif
+
 }//End namespace TWrapper

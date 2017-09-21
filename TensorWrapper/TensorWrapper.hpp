@@ -76,7 +76,7 @@ public:
     using index_t=typename base_type::index_t;
 
     ///\copydoc TensorWrapperBase()
-    TensorWrapper()=default;
+    TensorWrapper(){}
 
     /** \brief Returns a polymorphic deep copy of this instance allocated on the
      *  heap.
@@ -144,7 +144,9 @@ public:
      *   \param[in] other The TensorWrapper instance to copy
      *
      */
-    TensorWrapper(const my_type& /*other*/)=default;
+    TensorWrapper(const my_type& other):
+       base_type(other)
+    {}
 
     /** \brief The copy assignment operator for TensorWrapper instances that
      *  share the same backend.
@@ -157,14 +159,20 @@ public:
      *   \returns The current instance containing a copy of \p other
      *
      */
-    my_type& operator=(const my_type& /*other*/)=default;
+    my_type& operator=(const my_type& other)
+    {
+        base_type::operator=(other);
+        return *this;
+    }
 
     /** \brief The move constructor for TensorWrapper instances that
      *  share the same backend.
      *
      *   \param[in] other The TensorWrapper instance to take ownership of
      */
-    TensorWrapper(my_type&&)=default;
+    TensorWrapper(my_type&& other):
+        base_type(std::move(other))
+    {}
 
     /** \brief The move assignment for TensorWrapper instances that
      *  share the same backend.
@@ -173,7 +181,11 @@ public:
      *   \returns The current instance containing \p other
      *
      */
-    my_type& operator=(my_type&&)=default;
+    my_type& operator=(my_type&& other)
+    {
+        base_type::operator=(std::move(other));
+        return *this;
+    }
 
     /** \brief The constructor used for wrapping the native classes of a tensor
      *         backend.
@@ -370,14 +382,6 @@ using GlobalArray=TensorWrapper<rank,T,detail_::TensorTypes::GlobalArrays>;
 template<size_t rank,typename T>
 using TATensor=TensorWrapper<rank,T,detail_::TensorTypes::TiledArray>;
 
-template class TensorWrapper<1,double,detail_::TensorTypes::EigenMatrix>;
-template class TensorWrapper<2,double,detail_::TensorTypes::EigenMatrix>;
-
-template class TensorWrapper<1,double,detail_::TensorTypes::EigenTensor>;
-template class TensorWrapper<2,double,detail_::TensorTypes::EigenTensor>;
-template class TensorWrapper<3,double,detail_::TensorTypes::EigenTensor>;
-template class TensorWrapper<4,double,detail_::TensorTypes::EigenTensor>;
-
 }//End namespace TWrapper
 
 ///Overload equality operator for our types on right
@@ -395,5 +399,9 @@ bool operator!=(LHS&& lhs,const TWrapper::TensorWrapper<R,T,TT>& rhs)
 {
     return rhs!=std::forward<LHS>(lhs);
 }
+
+#ifdef BUILD_TWRAPPER_LIBRARY
+#include "TensorWrapper/TensorWrapperExtern.hpp"
+#endif
 
 #include "TensorWrapper/EnableUselessWarnings.hpp"

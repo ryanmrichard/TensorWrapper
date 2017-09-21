@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.2)
 project(TensorWrapper-Core CXX)
 include(${TWRAPPER_ROOT}/cmake/cmake_macros.cmake)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_EXTENSIONS False)
+
+# CMake doesn't support Intel CXX standard until cmake 3.6
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel")
+  if("${CMAKE_VERSION}" VERSION_LESS "3.6")
+      add_compile_options(-std=c++${CMAKE_CXX_STANDARD})
+  endif()
+endif()
+
 find_package(MPI REQUIRED)
 find_package(OpenMP REQUIRED)
 set(TENSORWRAPPER_INCLUDE_DIRS ${MPI_CXX_INCLUDE_PATH})
@@ -37,18 +47,27 @@ endif()
 
 
 configure_file("MathLibs.hpp.in" MathLibs.hpp @ONLY)
-configure_file("Config.hpp.in" Config.hpp @ONLY)
+configure_file("Config.hpp.in" TensorWrapper/Config.hpp @ONLY)
 
-#if(${BUILD_LIBRARY})
-#    add_library(TensorWrapper )
-#    target_include_directories(TensorWrapper ${TWRAPPER_ROOT}/TensorWrapper
-#                                             ${TENSORWRAPPER_INCLUDE_DIRS}
-#                                             ${CMAKE_BINARY_DIR}
-#    )
-#    target_compile_options(TensorWrapper ${OpenMP_CXX_FLAGS})
-#    target_link_libraries(TensorWrapper ${TENSORWRAPPER_LIBRARIES})
-#    install(TARGETS TensorWrapper DESTINATION TensorWrapper)
-#endif()
+if(${BUILD_LIBRARY})
+    add_library(TensorWrapper SHARED IndexItr.cpp
+                                     MemoryBlock.cpp
+                                     Shape.cpp
+                                     TensorPtr.cpp
+                                     TensorWrapperExtern.cpp
+
+    )
+    target_include_directories(TensorWrapper PRIVATE
+                                             ${TWRAPPER_ROOT}
+                                             ${TENSORWRAPPER_INCLUDE_DIRS}
+                                             ${CBLAS_INCLUDE_DIR}
+                                             ${LAPACKE_INCLUDE_DIR}
+                                             ${CMAKE_BINARY_DIR}
+    )
+    target_compile_options(TensorWrapper PRIVATE ${OpenMP_CXX_FLAGS})
+    target_link_libraries(TensorWrapper PRIVATE ${TENSORWRAPPER_LIBRARIES})
+    install(TARGETS TensorWrapper DESTINATION lib/TensorWrapper)
+endif()
 
 # Write the configure file so other packages can find us
 configure_file("${TWRAPPER_ROOT}/cmake/TensorWrapperConfig.cmake.in"
@@ -67,5 +86,5 @@ install(FILES ${CMAKE_BINARY_DIR}/TensorWrapperConfig.cmake
 install(FILES ${CMAKE_BINARY_DIR}/MathLibs.hpp
         DESTINATION include/TensorWrapper)
 
-install(FILES ${CMAKE_BINARY_DIR}/Config.hpp
+install(FILES ${CMAKE_BINARY_DIR}/TensorWrapper/Config.hpp
         DESTINATION include/TensorWrapper)

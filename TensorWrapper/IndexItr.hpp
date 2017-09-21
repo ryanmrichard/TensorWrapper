@@ -31,31 +31,6 @@ void next(std::array<size_t,rank>& idx,
     }
 }
 
-/* Explicit instantiations */
-
-//extern template void next<0>(std::array<size_t,rank>&,
-//                      const std::array<size_t,rank>&,
-//                      const std::array<size_t,rank>&,
-//                      bool row_major);
-
-//extern template void next<1>(std::array<size_t,rank>&,
-//                      const std::array<size_t,rank>&,
-//                      const std::array<size_t,rank>&,
-//                      bool row_major);
-//extern template void next<2>(std::array<size_t,rank>&,
-//                      const std::array<size_t,rank>&,
-//                      const std::array<size_t,rank>&,
-//                      bool row_major);
-//extern template void next<3>(std::array<size_t,rank>&,
-//                      const std::array<size_t,rank>&,
-//                      const std::array<size_t,rank>&,
-//                      bool row_major);
-//extern template void next<4>(std::array<size_t,rank>&,
-//                      const std::array<size_t,rank>&,
-//                      const std::array<size_t,rank>&,
-//                      bool row_major);
-
-
 }// End namespace detail_
 
 /** \brief A class that generates the indices in the order they are laid out in
@@ -76,7 +51,7 @@ public:
 
     using pointer=value_type*;
 
-    using const_pointer=const pointer;
+    using const_pointer=const value_type*;
 
     using incrementor_type=
         std::function<void(reference,const_reference,const_reference,bool)>;
@@ -201,10 +176,12 @@ private:
     incrementor_type next_;
 };
 
-//extern template class IndexItr<0>;
-//extern template class IndexItr<1>;
-//extern template class IndexItr<2>;
-//extern template class IndexItr<3>;
-//extern template class IndexItr<4>;
+#ifdef BUILD_TWRAPPER_LIBRARY
+extern template class IndexItr<0>;
+extern template class IndexItr<1>;
+extern template class IndexItr<2>;
+extern template class IndexItr<3>;
+extern template class IndexItr<4>;
+#endif
 
 }//End namespace

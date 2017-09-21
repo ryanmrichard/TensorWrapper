@@ -3,7 +3,6 @@ project(TensorWrapper-test CXX)
 find_package(TensorWrapper REQUIRED)
 find_package(OpenMP REQUIRED)
 include(CTest)
-message("OpenMP library ${OpenMP_CXX_LIBRARIES}")
 enable_testing()
 
 set(CMAKE_CXX_STANDARD 14)

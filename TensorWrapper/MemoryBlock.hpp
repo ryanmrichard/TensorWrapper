@@ -78,7 +78,7 @@ public:
      *
      *  \throws None.  No throw guarantee.
      */
-    MemoryBlock()noexcept=default;
+    MemoryBlock()noexcept{}
 
     //See class documentation for why these are deleted
     MemoryBlock(const MemoryBlock<rank,T>&)=delete;
@@ -90,7 +90,11 @@ public:
      *  \param[in] other The instance to take the state of.
      *  \throws None.  No throw gurantee.
      */
-    MemoryBlock(MemoryBlock<rank,T>&& /*other*/)noexcept=default;
+    MemoryBlock(MemoryBlock<rank,T>&& other)noexcept:
+        buffers_(std::move(other.buffers_)),
+        memory_(std::move(other.memory_)),
+        shapes_(std::move(other.shapes_))
+    {}
 
     /** \brief Makes a new MemoryBlock by taking the contents of another
      *   instance.
@@ -100,14 +104,20 @@ public:
      *  \returns The current instance after taking the state of \p other.
      *  \throws None.  No throw gurantee.
      */
-    MemoryBlock<rank,T>& operator=(MemoryBlock&& /*other*/)noexcept=default;
+    MemoryBlock<rank,T>& operator=(MemoryBlock&& other)noexcept
+    {
+        buffers_=std::move(other.buffers_);
+        memory_=std::move(other.memory_);
+        shapes_=std::move(other.shapes_);
+        return *this;
+    }
 
     /** \brief Frees up resources of the class.
      *
      *  If this class owned the memory all pointers to it are now invalidated.
      *  \throws None. No throw guarantee.
      */
-    ~MemoryBlock()noexcept=default;
+    ~MemoryBlock()noexcept{}
 
     /** \brief Adds a new block to the instance.
      *
@@ -216,5 +226,12 @@ private:
     std::vector<Shape<rank>> shapes_;
 
 };
+
+#ifdef BUILD_TWRAPPER_LIBRARY
+extern template class MemoryBlock<1,double>;
+extern template class MemoryBlock<2,double>;
+extern template class MemoryBlock<3,double>;
+extern template class MemoryBlock<4,double>;
+#endif
 
 }
