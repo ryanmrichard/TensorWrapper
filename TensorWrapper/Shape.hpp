@@ -3,7 +3,8 @@
 #include<array>
 #include<tuple> //For tie
 #include<functional> //For minus, multiplies
-#include<algorithm> //For transform,accumulate
+#include<algorithm> //For transform
+#include<numeric>//For accumulate
 
 namespace TWrapper {
 
