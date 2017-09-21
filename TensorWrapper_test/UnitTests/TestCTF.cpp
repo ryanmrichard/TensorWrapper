@@ -1,5 +1,5 @@
 #include <TensorWrapper/Config.hpp>
-#include <TensorWrapper/TensorImpl/CTFWrapper.hpp>
+#include <TensorWrapper/TensorImpls.hpp>
 #include <TensorWrapper/RunTime.hpp>
 #include "TestHelpers.hpp"
 
