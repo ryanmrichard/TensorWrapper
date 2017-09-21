@@ -15,7 +15,7 @@ matrix:
         - g++-5
         - libblas-dev
         - liblapacke-dev
-        - mpich2
+        - libopenmpi-dev
         - mercurial
     env: CXX_COMPILER='g++-5'
 install:
