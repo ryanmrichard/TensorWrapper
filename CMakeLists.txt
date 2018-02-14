@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.6)
 project(TensorWrapper VERSION 0.0.0 LANGUAGES CXX)
 find_package(NWChemExBase)
-set(TensorWrapper_DEPENDENCIES)
+set(TensorWrapper_DEPENDENCIES UtilitiesEx)
 build_nwchemex_module(${CMAKE_CURRENT_LIST_DIR})
