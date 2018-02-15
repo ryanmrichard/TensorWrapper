@@ -1,4 +1,5 @@
 #pragma once
+
 #include<vector>
 #include<array>
 #include<stdexcept>
@@ -26,7 +27,7 @@ namespace TensorWrapper {
  *
  */
 class Space {
-public:
+    public:
     ///The type of object used for indexing into the space
     using size_type = std::size_t;
     ///The type of a range (low index, high index) array
@@ -60,6 +61,20 @@ public:
     Space(Space&& /*rhs*/)noexcept = default;
 
     /**
+     * @brief Creates a tensor space given the lengths of each mode.
+     *
+     * @tparam container_type The type of the input set of dimensions.  It
+     * must have cbegin() and cend().
+     * @param lengths An @f$o@f$ element container where the @f$i@f$-th element
+     * is the length of the @f$i@f$-th mode of the space.
+     * @throw std::bad_alloc if there is insufficient memory to create the
+     * vector.  Strong throw guarantee.
+     */
+    template<typename container_type>
+    Space(const container_type& lengths):
+      lengths_(lengths.cbegin(), lengths.cend()) {}
+
+    /**
      * @brief Cleans up any memory held by the current instance.
      * @throw None. No throw guarantee.
      *
@@ -86,21 +101,6 @@ public:
     Space& operator=(Space&& /*rhs*/)noexcept= default;
 
     /**
-     * @brief Creates a tensor space given the lengths of each mode.
-     *
-     * @tparam container_type The type of the input set of dimensions.  It
-     * must have cbegin() and cend().
-     * @param lengths An @f$o@f$ element container where the @f$i@f$-th element
-     * is the length of the @f$i@f$-th mode of the space.
-     * @throw std::bad_alloc if there is insufficient memory to create the
-     * vector.  Strong throw guarantee.
-     */
-    template <typename container_type>
-    Space(const container_type& lengths):
-        lengths_(lengths.cbegin(), lengths.cend())
-    {}
-
-    /**
      * @brief Returns the number of modes in an element of this space.
      *
      * Per the usual statements an order of 0 indicates that elements of the
@@ -110,7 +110,7 @@ public:
      * tensor-product space.
      * @throw None. No throw guarantee.
      */
-    size_type order()const noexcept{return lengths_.size();}
+    size_type order() const noexcept { return lengths_.size(); }
 
     /**
      * @brief Returns the number of components an element of this space has.
@@ -122,7 +122,17 @@ public:
      * @return The number of elements in a tensor from this space.
      * @throw No throw guarantee.
      */
-    size_type size()const noexcept;
+    size_type size() const noexcept;
+
+    /**
+     * @brief Returns the length of a particular mode of the tensor.
+     * @param i The mode whose length is desired.  Should be in the range [0,
+     * order) although no check is performed to ensure that it is and access
+     * outside this range is undefined behavior.
+     * @return The length of the requested mode.
+     * @throw None. No throw guarantee.
+     */
+    size_type length(size_type i) const noexcept { return lengths_[i]; }
 
     /**
      * @brief Returns true if the requested index is part of this space.
@@ -143,12 +153,43 @@ public:
      * @throw None. No throw guarantee.
      */
     template<typename container_type>
-    bool count(const container_type& idx)const noexcept{
+    bool count(const container_type& idx) const noexcept {
         return count_(std::vector<size_type>(idx.cbegin(), idx.cend()));
     }
 
-//    template<typename from_type, typename to_type>
-//    Space& swap_modes(const from_type& from, const to_type& to)noexcept;
+    /**
+     * @brief Swaps the modes of a tensor around.
+     *
+     * Usage of this function is best explained by an example.  Assume you
+     * have an order 3 tensor called A, and you provided the input:
+     *
+     * from: {1, 2, 0}
+     * to: {0, 1, 2}
+     *
+     * This function will create a new tensor B whose first mode is A's second
+     * mode, B's second mode will be A's third mode, and B's third mode will be
+     * A's first mode.
+     *
+     * @tparam from_type The type of the container listing the original indices.
+     *         Must satisfy the concept sequence container.
+     * @tparam to_type The type of the container holding the new indices. Must
+     *         satisfy the concept sequence container.
+     * @param from Up to order() indices in the range [0,order()) such that the
+     *        @f$i@f$-th value is the number of the original mode that will
+     *        be the to[@f$i@f$]-th mode of the new tensor.
+     * @param to Up to order() indices in the range [0, order()) such that the
+     *        @f$i@f$-th value is the new index of the original from[@f$i@f$]-th
+     *        mode.
+     * @return The current Space with the modes in the new order.
+     * @throw std::bad_alloc if there is insufficient memory to copy the
+     *        lengths.  Strong throw guarantee.
+     *
+     */
+    template<typename from_type, typename to_type>
+    Space& shuffle(const from_type& from, const to_type& to)  {
+        return shuffle_(std::vector<size_type>(from.cbegin(), from.cend()),
+                        std::vector<size_type>(to.cbegin(), to.cend()));
+    }
 
     /**
      * @brief Compares two spaces for exact equality.
@@ -163,7 +204,7 @@ public:
      * otherwise.
      * @throw None. No throw guarantee.
      */
-    bool operator==(const Space& rhs)const noexcept;
+    bool operator==(const Space& rhs) const noexcept;
 
     /**
      * @brief Determines if two spaces are different.
@@ -176,7 +217,7 @@ public:
      * that is not found in @p rhs or vice versa.
      * @throw None. No throw guarantee.
      */
-    bool operator!=(const Space& rhs)const noexcept{return !(*this==rhs);}
+    bool operator!=(const Space& rhs) const noexcept { return !(*this == rhs); }
 
     /**
      * @brief Determines if the current space is a proper subspace of another.
@@ -207,7 +248,7 @@ public:
      * @return true if this is a proper subspace of @p rhs and false otherwise.
      * @throw None. No throw guarantee.
      */
-    bool operator<(const Space& rhs)const noexcept;
+    bool operator<(const Space& rhs) const noexcept;
 
     /**
      * @brief Determines if the current space is a subspace.
@@ -220,8 +261,8 @@ public:
      * within @p rhs and false otherwise.
      * @throw None. No throw guarantee.
      */
-    bool operator<=(const Space& rhs)const noexcept{
-        return *this<rhs || *this==rhs;
+    bool operator<=(const Space& rhs) const noexcept {
+        return *this < rhs || *this == rhs;
     }
 
     /**
@@ -237,7 +278,7 @@ public:
      * current instance.  False otherwise.
      * @throw None. No throw guarantee.
      */
-    bool operator>(const Space& rhs)const noexcept{return rhs<*this;}
+    bool operator>(const Space& rhs) const noexcept { return rhs < *this; }
 
     /**
      * @brief Determines if the current space is a superspace.
@@ -249,13 +290,17 @@ public:
      * otherwise.
      * @throw None. No throw guarantee.
      */
-    bool operator>=(const Space& rhs)const noexcept{return rhs<=*this;}
+    bool operator>=(const Space& rhs) const noexcept { return rhs <= *this; }
 
-protected:
-    ///The method actually implementing the look-up
-    virtual bool count_(const std::vector<size_type>& idx)const noexcept;
+    protected:
 
-private:
+    ///The method actually implementing the look-up of an element
+    virtual bool count_(const std::vector <size_type>& idx) const noexcept;
+
+    ///The method actually responsible for shuffling the modes
+    virtual Space& shuffle_(const std::vector<size_type>& from,
+                            const std::vector<size_type>& to);
+    private:
     ///The shape of this instance
     std::vector <size_type> lengths_;
 };

@@ -1,8 +1,11 @@
 #include <TensorWrapper/Space.hpp>
+#include <UtilitiesEx/IterTools/Enumerate.hpp>
 #include <catch/catch.hpp>
 #include <numeric>
 
+
 using namespace TensorWrapper;
+using namespace UtilitiesEx;
 
 template<std::size_t order>
 using array_type=std::array<std::size_t, order>;
@@ -14,6 +17,8 @@ void check_state(const Space& s, const array_t& lengths){
     const std::size_t order = lengths.size();
     REQUIRE(s.size() == size);
     REQUIRE(s.order() == order);
+    for(auto o : UtilitiesEx::Enumerate(lengths))
+        REQUIRE(s.length(std::get<0>(o)) == std::get<1>(o));
     if(order)
         REQUIRE(!s.count(lengths));
 }
@@ -61,6 +66,24 @@ TEST_CASE("Copy/Move construction/assignment"){
         Space empty;
         empty = std::move(s);
         check_state(empty, lengths);
+    }
+}
+
+TEST_CASE("Shuffle") {
+    array_type<3> lengths{3, 4, 9};
+    array_type<0> null{};
+    Space s{lengths};
+    SECTION("Null shuffle"){
+        s.shuffle(null, null);
+        for(auto i : Range(3))
+            REQUIRE(s.length(i) == lengths[i]);
+    }
+    array_type<3> to{0, 1, 2};
+    array_type<3> from{1, 2, 0};
+    SECTION("1->0 2->1 0->2"){
+        s.shuffle(from, to);
+        for(auto i: Range(3))
+        REQUIRE(s.length(to[i])  == lengths[from[i]]);
     }
 }
 

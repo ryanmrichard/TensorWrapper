@@ -1,5 +1,7 @@
 #include "Space.hpp"
+#include<UtilitiesEx/IterTools/Zip.hpp>
 #include<numeric>
+
 
 namespace TensorWrapper {
 
@@ -13,10 +15,17 @@ size_type Space::size()const noexcept {
 
 bool Space::count_(const std::vector<size_type>& idx)const noexcept{
     if(idx.size() > order()) return false;
-    for(size_type i=0; i < idx.size(); ++i)
-        if(idx[i] >= lengths_[i])
-            return false;
-    return true;
+    return std::lexicographical_compare(idx.cbegin(), idx.cend(),
+                                        lengths_.cbegin(), lengths_.cend());
+}
+
+Space& Space::shuffle_(const std::vector <size_type>& from,
+                       const std::vector <size_type>& to)  {
+    std::vector<size_type> temp(lengths_);
+    for(auto p : UtilitiesEx::Zip(from, to))
+        temp[std::get<1>(p)] = lengths_[std::get<0>(p)];
+    lengths_.swap(temp);
+    return *this;
 }
 
 bool Space::operator==(const Space& rhs)const noexcept {
@@ -24,9 +33,7 @@ bool Space::operator==(const Space& rhs)const noexcept {
 }
 
 bool Space::operator<(const Space& rhs)const noexcept {
-    return std::lexicographical_compare(lengths_.begin(), lengths_.end(),
-                                        rhs.lengths_.begin(), rhs.lengths_
-                                                .end());
+    return rhs.count(lengths_) && rhs.count(std::vector<size_type>(order()));
 }
 
 } //End namespace
